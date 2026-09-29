@@ -261,6 +261,7 @@ export const transferMoney = async (
         recipient: {
           firstName: recipientAccount.user.firstName,
           lastName: recipientAccount.user.lastName,
+          email: recipientAccount.user.email,
           accountNumber: recipientAccount.accountNumber,
         },
       },
