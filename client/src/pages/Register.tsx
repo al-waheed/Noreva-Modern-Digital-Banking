@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 const Register = () => {
   const { register } = useAuth();
@@ -36,14 +37,14 @@ const Register = () => {
         form.lastName,
         form.email,
         form.phone,
-        form.password
+        form.password,
       );
 
       navigate("/dashboard");
     } catch (error: any) {
       setError(
         error.response?.data?.message ||
-          "Unable to create your account. Please try again."
+          "Unable to create your account. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
@@ -137,13 +138,14 @@ const Register = () => {
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Password
               </label>
-              <input
-                type="password"
+              <PasswordInput
+                id="password"
                 value={form.password}
-                onChange={(e) => updateField("password", e.target.value)}
+                onChange={(value) => updateField("password", value)}
+                placeholder="Create a password"
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+                autoComplete="new-password"
               />
             </div>
 
@@ -151,15 +153,14 @@ const Register = () => {
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Confirm password
               </label>
-              <input
-                type="password"
+              <PasswordInput
+                id="confirmPassword"
                 value={form.confirmPassword}
-                onChange={(e) =>
-                  updateField("confirmPassword", e.target.value)
-                }
+                onChange={(value) => updateField("confirmPassword", value)}
+                placeholder="Confirm your password"
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+                autoComplete="new-password"
               />
             </div>
 

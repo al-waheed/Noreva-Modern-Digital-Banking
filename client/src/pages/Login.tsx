@@ -1,6 +1,7 @@
 import { useState, type SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 const Login = () => {
   const { login } = useAuth();
@@ -35,7 +36,7 @@ const Login = () => {
         <div className="mb-8">
           <div className="mb-6">
             <span className="text-xl font-bold tracking-tight text-slate-900">
-              Fintech
+             Noreva
             </span>
           </div>
 
@@ -76,15 +77,13 @@ const Login = () => {
               >
                 Password
               </label>
-
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={setPassword}
                 placeholder="Enter your password"
                 required
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
+                autoComplete="current-password"
               />
             </div>
 
@@ -93,7 +92,14 @@ const Login = () => {
                 {error}
               </div>
             )}
-
+            <div className="flex justify-end mb-2.5">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-slate-700 hover:text-slate-900 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <button
               type="submit"
               disabled={isSubmitting}

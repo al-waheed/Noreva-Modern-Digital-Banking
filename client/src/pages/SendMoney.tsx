@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { sendTransferEmail } from "../lib/email";
 import api from "../lib/api";
 
 interface Recipient {
@@ -91,8 +92,22 @@ const SendMoney = () => {
         },
       );
 
-      const transactionReference =
-        response.data.transfer.senderTransaction.reference;
+      const transfer = response.data.transfer;
+
+      const transactionReference = transfer.senderTransaction.reference;
+
+      try {
+        await sendTransferEmail({
+          toEmail: transfer.recipient.email,
+          toName: `${transfer.recipient.firstName} ${transfer.recipient.lastName}`,
+          amount: transfer.senderTransaction.amount,
+          senderName: `${user?.firstName} ${user?.lastName}`,
+          reference: transactionReference,
+          description: description.trim() || "Transfer",
+        });
+      } catch (emailError) {
+        console.error("Transfer email failed:", emailError);
+      }
 
       navigate(`/transactions/${transactionReference}`);
     } catch (error: any) {

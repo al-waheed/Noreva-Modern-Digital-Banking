@@ -9,12 +9,16 @@ import Transactions from "./pages/Transactions";
 import TransactionReceipt from "./pages/TransactionReceipt";
 import Cards from "./pages/Cards";
 import ScheduledPayments from "./pages/ScheduledPayments";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const App = () => {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<Register />} />
 
       <Route element={<ProtectedRoute />}>
