@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+import "./config/env";
 import prisma from "./config/prisma";
 import authRoutes from "./routes/auth.routes";
 import transferRoutes from "./routes/transfer.routes";
@@ -10,11 +10,16 @@ import scheduledPaymentRoutes from "./routes/scheduledPayment.routes";
 import notificationRoutes from "./routes/notification.routes";
 import { processScheduledPayments } from "./services/scheduledPayment.service";
 
-dotenv.config();
-
 const app = express();
 
-app.use(cors());
+const allowedOrigin = process.env.FRONTEND_URL;
+
+app.use(
+  cors({
+    origin: allowedOrigin,
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);

@@ -165,50 +165,55 @@ export const transferMoney = async (
       });
     }
 
-    const senderBalance = Number(sender.account.wallet.balance);
-
-    if (senderBalance < amount) {
-      return res.status(400).json({
-        success: false,
-        message: "Insufficient balance",
-      });
-    }
-
     const senderReference = generateReference("NRE-S");
     const receiverReference = generateReference("NRE-R");
 
-    const [
-      updatedSenderWallet,
-      updatedRecipientWallet,
-      senderTransaction,
-      receiverTransaction,
-    ] = await prisma.$transaction([
-      // Remove money from sender
-      prisma.wallet.update({
+    const transferResult = await prisma.$transaction(async (tx) => {
+      // Remove money from sender ONLY if the balance is sufficient.
+      const senderUpdate = await tx.wallet.updateMany({
         where: {
-          id: sender.account.wallet.id,
+          id: sender.account!.wallet!.id,
+          balance: {
+            gte: amount,
+          },
         },
         data: {
           balance: {
             decrement: amount,
           },
         },
-      }),
+      });
+
+      // If no wallet was updated, the sender does not have enough money.
+      if (senderUpdate.count === 0) {
+        throw new Error("INSUFFICIENT_BALANCE");
+      }
 
       // Add money to recipient
-      prisma.wallet.update({
+      const updatedRecipientWallet = await tx.wallet.update({
         where: {
-          id: recipientAccount.wallet.id,
+          id: recipientAccount.wallet!.id,
         },
         data: {
           balance: {
             increment: amount,
           },
         },
-      }),
+      });
+
+      // Get the sender's updated wallet balance
+      const updatedSenderWallet = await tx.wallet.findUnique({
+        where: {
+          id: sender.account!.wallet!.id,
+        },
+      });
+
+      if (!updatedSenderWallet) {
+        throw new Error("SENDER_WALLET_NOT_FOUND");
+      }
 
       // Create sender transaction
-      prisma.transaction.create({
+      const senderTransaction = await tx.transaction.create({
         data: {
           reference: senderReference,
           amount,
@@ -217,12 +222,12 @@ export const transferMoney = async (
           description: description || "Transfer",
           senderId: sender.id,
           receiverId: recipientAccount.userId,
-          walletId: sender.account.wallet.id,
+          walletId: sender.account!.wallet!.id,
         },
-      }),
+      });
 
       // Create receiver transaction
-      prisma.transaction.create({
+      const receiverTransaction = await tx.transaction.create({
         data: {
           reference: receiverReference,
           amount,
@@ -231,10 +236,17 @@ export const transferMoney = async (
           description: description || "Transfer",
           senderId: sender.id,
           receiverId: recipientAccount.userId,
-          walletId: recipientAccount.wallet.id,
+          walletId: recipientAccount.wallet!.id,
         },
-      }),
-    ]);
+      });
+
+      return {
+        updatedSenderWallet,
+        updatedRecipientWallet,
+        senderTransaction,
+        receiverTransaction,
+      };
+    });
 
     await Promise.all([
       createNotification({
@@ -254,10 +266,10 @@ export const transferMoney = async (
       success: true,
       message: "Transfer successful",
       transfer: {
-        senderBalance: updatedSenderWallet.balance,
-        recipientBalance: updatedRecipientWallet.balance,
-        senderTransaction,
-        receiverTransaction,
+        senderBalance: transferResult.updatedSenderWallet.balance,
+        recipientBalance: transferResult.updatedRecipientWallet.balance,
+        senderTransaction: transferResult.senderTransaction,
+        receiverTransaction: transferResult.receiverTransaction,
         recipient: {
           firstName: recipientAccount.user.firstName,
           lastName: recipientAccount.user.lastName,
@@ -267,6 +279,13 @@ export const transferMoney = async (
       },
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "INSUFFICIENT_BALANCE") {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient balance",
+      });
+    }
+
     console.error("Transfer error:", error);
 
     return res.status(500).json({

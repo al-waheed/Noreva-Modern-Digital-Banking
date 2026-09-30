@@ -23,9 +23,12 @@ export const getNotifications = async (
       take: 20,
     });
 
-    const unreadCount = notifications.filter(
-      (notification) => !notification.read,
-    ).length;
+    const unreadCount = await prisma.notification.count({
+      where: {
+        userId: req.userId,
+        read: false,
+      },
+    });
 
     return res.json({
       success: true,
