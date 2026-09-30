@@ -147,13 +147,6 @@ const ScheduledPayments = () => {
       minimumFractionDigits: 2,
     })}`;
 
-  const formatDate = (value: string) =>
-    new Date(value).toLocaleDateString("en-NG", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-
   const formatFrequency = (value: string) =>
     value.charAt(0) + value.slice(1).toLowerCase();
 
