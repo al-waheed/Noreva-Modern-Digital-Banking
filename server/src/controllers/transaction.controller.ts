@@ -42,6 +42,11 @@ export const getTransactions = async (
             firstName: true,
             lastName: true,
             email: true,
+            account: {
+              select: {
+                accountNumber: true,
+              },
+            },
           },
         },
         receiver: {
@@ -49,6 +54,11 @@ export const getTransactions = async (
             firstName: true,
             lastName: true,
             email: true,
+            account: {
+              select: {
+                accountNumber: true,
+              },
+            },
           },
         },
       },
@@ -107,6 +117,11 @@ export const getTransactionByReference = async (
             firstName: true,
             lastName: true,
             email: true,
+            account: {
+              select: {
+                accountNumber: true,
+              },
+            },
           },
         },
         receiver: {
@@ -114,6 +129,11 @@ export const getTransactionByReference = async (
             firstName: true,
             lastName: true,
             email: true,
+            account: {
+              select: {
+                accountNumber: true,
+              },
+            },
           },
         },
       },

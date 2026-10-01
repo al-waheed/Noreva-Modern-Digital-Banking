@@ -19,15 +19,23 @@ interface Transaction {
   status: string;
   description?: string;
   createdAt: string;
+
   sender?: {
     firstName: string;
     lastName: string;
     email: string;
+    account?: {
+      accountNumber: string;
+    };
   };
+
   receiver?: {
     firstName: string;
     lastName: string;
     email: string;
+    account?: {
+      accountNumber: string;
+    };
   };
 }
 
@@ -49,6 +57,8 @@ const TransactionReceipt = () => {
             Authorization: `Bearer ${token}`,
           },
         });
+
+        console.log("Receipt transaction:", response.data.transaction);
 
         setTransaction(response.data.transaction);
       } catch (error) {
@@ -90,7 +100,7 @@ const TransactionReceipt = () => {
     }, 1500);
   };
 
-  const createReceiptCanvas = () => {
+  const createReceiptCanvas = async () => {
     if (!transaction) {
       throw new Error("Transaction not found");
     }
@@ -109,35 +119,130 @@ const TransactionReceipt = () => {
       throw new Error("Unable to create receipt");
     }
 
+    // --------------------------------------------------
+    // LOAD THE REAL NOREVA LOGO
+    // --------------------------------------------------
+
+    const logo = new Image();
+
+    await new Promise<void>((resolve, reject) => {
+      logo.onload = () => resolve();
+      logo.onerror = () => reject(new Error("Unable to load Noreva logo"));
+      logo.src = "/image/novera.png";
+    });
+
+    // --------------------------------------------------
+    // WHITE BACKGROUND
+    // --------------------------------------------------
+
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, height);
 
-    // Logo
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "bold 32px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("NOREVA", width / 2, 65);
+    // --------------------------------------------------
+    // SUBTLE NOREVA WATERMARK
+    // --------------------------------------------------
 
-    // Title
+    ctx.save();
+
+    // Slightly stronger than before so it is actually
+    // visible while still remaining subtle.
+    ctx.globalAlpha = 0.07;
+
+    const watermarkPositions = [
+      { x: 120, y: 150, rotation: -0.15 },
+      { x: 500, y: 190, rotation: 0.1 },
+      { x: 850, y: 140, rotation: -0.12 },
+
+      { x: 250, y: 390, rotation: 0.12 },
+      { x: 680, y: 360, rotation: -0.1 },
+
+      { x: 120, y: 650, rotation: 0.1 },
+      { x: 500, y: 700, rotation: -0.12 },
+      { x: 850, y: 650, rotation: 0.1 },
+
+      { x: 250, y: 930, rotation: -0.1 },
+      { x: 680, y: 950, rotation: 0.12 },
+
+      { x: 150, y: 1130, rotation: -0.1 },
+      { x: 520, y: 1170, rotation: 0.1 },
+      { x: 850, y: 1120, rotation: -0.12 },
+    ];
+
+    watermarkPositions.forEach(({ x, y, rotation }) => {
+      ctx.save();
+
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+
+      const watermarkWidth = 150;
+      const watermarkHeight = (logo.height / logo.width) * watermarkWidth;
+
+      ctx.drawImage(
+        logo,
+        -watermarkWidth / 2,
+        -watermarkHeight / 2,
+        watermarkWidth,
+        watermarkHeight,
+      );
+
+      ctx.restore();
+    });
+
+    ctx.restore();
+
+    // --------------------------------------------------
+    // REAL NOREVA LOGO AT THE TOP
+    // --------------------------------------------------
+
+    const logoMaxWidth = 180;
+    const logoMaxHeight = 55;
+
+    const logoScale = Math.min(
+      logoMaxWidth / logo.width,
+      logoMaxHeight / logo.height,
+    );
+
+    const logoWidth = logo.width * logoScale;
+    const logoHeight = logo.height * logoScale;
+
+    ctx.drawImage(logo, width / 2 - logoWidth / 2, 30, logoWidth, logoHeight);
+
+    // --------------------------------------------------
+    // TITLE
+    // --------------------------------------------------
+
+    ctx.fillStyle = "#0f172a";
     ctx.font = "bold 34px Arial";
+    ctx.textAlign = "center";
     ctx.fillText("Transfer Receipt", width / 2, 130);
 
-    // Success icon
+    // --------------------------------------------------
+    // SUCCESS ICON
+    // --------------------------------------------------
+
     ctx.beginPath();
     ctx.arc(width / 2, 190, 32, 0, Math.PI * 2);
+
     ctx.fillStyle = "#0f172a";
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 28px Arial";
+    ctx.textAlign = "center";
     ctx.fillText("✓", width / 2, 200);
 
-    // Status
+    // --------------------------------------------------
+    // STATUS
+    // --------------------------------------------------
+
     ctx.fillStyle = "#15803d";
     ctx.font = "bold 22px Arial";
     ctx.fillText("TRANSFER SUCCESSFUL", width / 2, 255);
 
-    // Amount
+    // --------------------------------------------------
+    // AMOUNT
+    // --------------------------------------------------
+
     ctx.fillStyle = "#64748b";
     ctx.font = "20px Arial";
     ctx.fillText("Amount sent", width / 2, 315);
@@ -146,10 +251,17 @@ const TransactionReceipt = () => {
     ctx.font = "bold 42px Arial";
     ctx.fillText(formatCurrency(transaction.amount), width / 2, 365);
 
-    // Receipt box
+    // --------------------------------------------------
+    // RECEIPT BOX
+    // --------------------------------------------------
+
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 2;
     ctx.strokeRect(70, 410, width - 140, 560);
+
+    // --------------------------------------------------
+    // ORIGINAL ROW DESIGN
+    // --------------------------------------------------
 
     const drawRow = (label: string, value: string, y: number) => {
       ctx.textAlign = "left";
@@ -165,23 +277,100 @@ const TransactionReceipt = () => {
 
       ctx.strokeStyle = "#f1f5f9";
       ctx.lineWidth = 1;
+
       ctx.beginPath();
       ctx.moveTo(105, y + 25);
       ctx.lineTo(width - 105, y + 25);
       ctx.stroke();
     };
 
-    drawRow(
-      "From",
-      `${transaction.sender?.firstName || ""} ${transaction.sender?.lastName || ""}`,
+    // --------------------------------------------------
+    // FROM
+    // --------------------------------------------------
+
+    ctx.textAlign = "left";
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "20px Arial";
+    ctx.fillText("From", 105, 455);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "right";
+
+    ctx.fillText(
+      `${transaction.sender?.firstName || ""} ${
+        transaction.sender?.lastName || ""
+      }`,
+      width - 105,
       455,
     );
 
-    drawRow(
-      "To",
-      `${transaction.receiver?.firstName || ""} ${transaction.receiver?.lastName || ""}`,
+    // Bank name + account number
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "15px Arial";
+    ctx.textAlign = "right";
+
+    ctx.fillText(
+      `Noreva | ${transaction.sender?.account?.accountNumber || "N/A"}`,
+      width - 105,
+      477,
+    );
+
+    // Divider
+    ctx.strokeStyle = "#f1f5f9";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(105, 495);
+    ctx.lineTo(width - 105, 495);
+    ctx.stroke();
+
+    // --------------------------------------------------
+    // TO
+    // --------------------------------------------------
+
+    ctx.textAlign = "left";
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "20px Arial";
+    ctx.fillText("To", 105, 535);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "right";
+
+    ctx.fillText(
+      `${transaction.receiver?.firstName || ""} ${
+        transaction.receiver?.lastName || ""
+      }`,
+      width - 105,
       535,
     );
+
+    // Bank name + account number
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "15px Arial";
+    ctx.textAlign = "right";
+
+    ctx.fillText(
+      `Noreva | ${transaction.receiver?.account?.accountNumber || "N/A"}`,
+      width - 105,
+      557,
+    );
+
+    // Divider
+    ctx.strokeStyle = "#f1f5f9";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(105, 575);
+    ctx.lineTo(width - 105, 575);
+    ctx.stroke();
+
+    // --------------------------------------------------
+    // REST OF RECEIPT — UNCHANGED
+    // --------------------------------------------------
 
     drawRow("Description", transaction.description || "Transfer", 615);
 
@@ -189,23 +378,35 @@ const TransactionReceipt = () => {
 
     drawRow("Status", transaction.status.toLowerCase(), 775);
 
-    // Reference
+    // --------------------------------------------------
+    // REFERENCE
+    // --------------------------------------------------
+
     ctx.textAlign = "left";
+
     ctx.fillStyle = "#64748b";
     ctx.font = "20px Arial";
+
     ctx.fillText("Transaction reference", 105, 855);
 
     ctx.fillStyle = "#f8fafc";
+
     ctx.fillRect(105, 880, width - 210, 55);
 
     ctx.fillStyle = "#334155";
     ctx.font = "16px Arial";
+
     ctx.fillText(transaction.reference, 125, 914);
 
-    // Footer
+    // --------------------------------------------------
+    // FOOTER
+    // --------------------------------------------------
+
     ctx.textAlign = "center";
+
     ctx.fillStyle = "#94a3b8";
     ctx.font = "16px Arial";
+
     ctx.fillText("Noreva — Modern Digital Banking", width / 2, 1030);
 
     ctx.fillText(
@@ -217,13 +418,17 @@ const TransactionReceipt = () => {
     return canvas;
   };
 
-  const downloadImage = () => {
+  // --------------------------------------------------
+  // DOWNLOAD IMAGE
+  // --------------------------------------------------
+
+  const downloadImage = async () => {
     try {
       if (!transaction) return;
 
       setIsDownloading(true);
 
-      const canvas = createReceiptCanvas();
+      const canvas = await createReceiptCanvas();
 
       const link = document.createElement("a");
 
@@ -238,13 +443,18 @@ const TransactionReceipt = () => {
     }
   };
 
-  const downloadPDF = () => {
+  // --------------------------------------------------
+  // DOWNLOAD PDF
+  // --------------------------------------------------
+
+  const downloadPDF = async () => {
     try {
       if (!transaction) return;
 
       setIsDownloading(true);
 
-      const canvas = createReceiptCanvas();
+      const canvas = await createReceiptCanvas();
+
       const image = canvas.toDataURL("image/png");
 
       const pdf = new jsPDF({
@@ -254,7 +464,9 @@ const TransactionReceipt = () => {
       });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
+
       const imageWidth = pageWidth - 30;
+
       const imageHeight = (canvas.height * imageWidth) / canvas.width;
 
       pdf.addImage(image, "PNG", 15, 15, imageWidth, imageHeight);
@@ -267,6 +479,10 @@ const TransactionReceipt = () => {
     }
   };
 
+  // --------------------------------------------------
+  // LOADING
+  // --------------------------------------------------
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -274,6 +490,10 @@ const TransactionReceipt = () => {
       </div>
     );
   }
+
+  // --------------------------------------------------
+  // NOT FOUND
+  // --------------------------------------------------
 
   if (!transaction) {
     return (
@@ -296,6 +516,8 @@ const TransactionReceipt = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      {/* HEADER */}
+
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-20 max-w-3xl items-center justify-between px-4 sm:px-6">
           <button
@@ -306,13 +528,17 @@ const TransactionReceipt = () => {
             Dashboard
           </button>
 
-          <div className="flex h-10 w-32 items-center justify-center rounded-lg border border-dashed border-slate-300">
-            <span className="text-[10px] font-medium text-slate-400">
-              NOREVA LOGO
-            </span>
+          <div className="flex h-10 w-25 items-center justify-center">
+            <img
+              src="/image/novera.png"
+              alt="Noreva Logo"
+              className="object-contain"
+            />
           </div>
         </div>
       </header>
+
+      {/* MAIN */}
 
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <div className="mb-6 text-center">
@@ -328,6 +554,8 @@ const TransactionReceipt = () => {
         </div>
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {/* AMOUNT */}
+
           <div className="border-b border-slate-200 px-6 py-7 text-center">
             <p className="text-sm text-slate-500">Amount sent</p>
 
@@ -337,22 +565,41 @@ const TransactionReceipt = () => {
           </div>
 
           <div className="divide-y divide-slate-100">
+            {/* FROM */}
+
             <div className="flex justify-between gap-6 px-6 py-4">
               <span className="text-sm text-slate-500">From</span>
 
-              <span className="text-right text-sm font-medium">
-                {transaction.sender?.firstName} {transaction.sender?.lastName}
-              </span>
+              <div className="text-right">
+                <p className="text-sm font-medium">
+                  {transaction.sender?.firstName} {transaction.sender?.lastName}
+                </p>
+
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Noreva | {transaction.sender?.account?.accountNumber || "N/A"}
+                </p>
+              </div>
             </div>
+
+            {/* TO */}
 
             <div className="flex justify-between gap-6 px-6 py-4">
               <span className="text-sm text-slate-500">To</span>
 
-              <span className="text-right text-sm font-medium">
-                {transaction.receiver?.firstName}{" "}
-                {transaction.receiver?.lastName}
-              </span>
+              <div className="text-right">
+                <p className="text-sm font-medium">
+                  {transaction.receiver?.firstName}{" "}
+                  {transaction.receiver?.lastName}
+                </p>
+
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Noreva |{" "}
+                  {transaction.receiver?.account?.accountNumber || "N/A"}
+                </p>
+              </div>
             </div>
+
+            {/* DESCRIPTION */}
 
             <div className="flex justify-between gap-6 px-6 py-4">
               <span className="text-sm text-slate-500">Description</span>
@@ -362,6 +609,8 @@ const TransactionReceipt = () => {
               </span>
             </div>
 
+            {/* DATE */}
+
             <div className="flex justify-between gap-6 px-6 py-4">
               <span className="text-sm text-slate-500">Date</span>
 
@@ -370,6 +619,8 @@ const TransactionReceipt = () => {
               </span>
             </div>
 
+            {/* STATUS */}
+
             <div className="flex justify-between gap-6 px-6 py-4">
               <span className="text-sm text-slate-500">Status</span>
 
@@ -377,6 +628,8 @@ const TransactionReceipt = () => {
                 {transaction.status.toLowerCase()}
               </span>
             </div>
+
+            {/* REFERENCE */}
 
             <div className="px-6 py-4">
               <p className="text-sm text-slate-500">Transaction reference</p>
@@ -402,6 +655,8 @@ const TransactionReceipt = () => {
           </div>
         </section>
 
+        {/* DOWNLOAD BUTTONS */}
+
         {isSuccessful && (
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <button
@@ -410,6 +665,7 @@ const TransactionReceipt = () => {
               className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ImageDown size={17} />
+
               {isDownloading ? "Preparing..." : "Download image"}
             </button>
 
@@ -419,10 +675,13 @@ const TransactionReceipt = () => {
               className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Download size={17} />
+
               {isDownloading ? "Preparing..." : "Download PDF"}
             </button>
           </div>
         )}
+
+        {/* DONE */}
 
         <button
           onClick={() => navigate("/dashboard")}

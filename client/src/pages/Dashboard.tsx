@@ -97,21 +97,14 @@ const Dashboard = () => {
       >
         {/* Logo placeholder */}
         <div className="flex h-20 items-center border-b border-slate-200 px-6">
-          <div className="flex h-12 w-full items-center justify-center">
-            {/* <span className="text-xs font-medium text-slate-400">
+          <div className="flex items-center justify-center">
+            <span className="text-xs font-medium text-slate-400">
               <img
                 src="/image/novera.png"
                 alt="Noreva Logo"
-                className="h-full w-full object-contain"
+                className="h-full w-30 object-contain"
               />
-            </span> */}
-            <Link to="/" className="flex h-10 w-30 items-center justify-center">
-              <img
-                src="/image/novera.png"
-                alt="Noreva Logo"
-                className="object-contain"
-              />
-            </Link>
+            </span>
           </div>
 
           <button

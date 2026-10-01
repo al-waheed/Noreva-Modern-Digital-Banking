@@ -162,10 +162,12 @@ const ScheduledPayments = () => {
             Back to dashboard
           </button>
 
-          <div className="flex h-10 w-32 items-center justify-center rounded-lg border border-dashed border-slate-300">
-            <span className="text-[10px] font-medium text-slate-400">
-              NOREVA LOGO
-            </span>
+          <div className="flex h-10 w-25 items-center justify-center">
+            <img
+              src="/image/novera.png"
+              alt="Noreva Logo"
+              className="object-contain"
+            />
           </div>
         </div>
       </header>
