@@ -1,22 +1,20 @@
 # Noreva — Modern Digital Banking
 
-Noreva is a portfolio fintech web application built to simulate a modern digital banking experience for Nigerian users.
+Noreva is a fintech web application built to simulate a modern digital banking experience for Nigerian users.
 
 It demonstrates a full-stack banking workflow including authentication, digital wallets, money transfers, transaction history, virtual cards, scheduled payments, notifications, and password recovery.
 
-> **Note:** Noreva is a portfolio/demo application. It does not process real money or connect to real banking infrastructure.
+> **Note:** Noreva is a demo application. It does not process real money or connect to real banking infrastructure.
 
 ## Screenshots
 
 ### Landing Page
 
-![Noreva Landing Page](./client/public/images/landing-page.png)
+![Noreva Landing Page](./client/public/image/landing-page.png)
 
 ### Dashboard
 
-![Noreva Dashboard](./client/public/images/dashboard.png)
-
-> Screenshots can be updated with the final production UI before publishing the repository.
+![Noreva Dashboard](./client/public/image/dashboard.png)
 
 ## Features
 
@@ -99,6 +97,7 @@ It demonstrates a full-stack banking workflow including authentication, digital 
 * React
 * TypeScript
 * Vite
+* Context Api
 * Tailwind CSS
 * React Router
 * Axios
@@ -132,6 +131,7 @@ Noreva
 │   ├── React
 │   ├── TypeScript
 │   ├── Tailwind CSS
+│   ├── Context Api
 │   ├── React Router
 │   └── Axios
 │
@@ -205,9 +205,9 @@ EMAILJS_PUBLIC_KEY=
 EMAILJS_PRIVATE_KEY=
 ```
 
-> Never commit `.env` files or private API keys to the repository.
-
 ## Getting Started
+
+**Live Demo:** [Noreva — Modern Digital Banking](https://norevabank.netlify.app/)
 
 ### Prerequisites
 
@@ -319,7 +319,7 @@ All protected endpoints require authentication.
 
 ## Project Goals
 
-Noreva was built as a portfolio project to demonstrate practical full-stack development skills through a realistic fintech use case.
+Noreva was built as a demo project to demonstrate practical full-stack development skills through a realistic fintech use case.
 
 The project focuses on:
 
@@ -351,14 +351,6 @@ Possible future improvements include:
 
 ## Disclaimer
 
-Noreva is a demonstration application created for portfolio purposes.
+Noreva is a demonstration application created for demo purposes.
 
 It does not provide real banking services, process real financial transactions, issue real payment cards, or connect to Nigerian banking infrastructure.
-
-## Author
-
-**Morenikeji Ajisegiri**
-
-Frontend / Software Engineer
-
-GitHub: [al-waheed](https://github.com/al-waheed)

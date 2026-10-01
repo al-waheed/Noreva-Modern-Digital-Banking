@@ -6,8 +6,12 @@ const Home = () => {
       {/* Navigation */}
       <header className="border-b border-slate-200">
         <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 lg:px-8">
-          <Link to="/" className="flex h-10 w-44 items-center justify-center">
-            <img src="/image/novera.png" alt="Noreva Logo" className="object-contain" />
+          <Link to="/" className="flex h-10 w-30 items-center justify-center">
+            <img
+              src="/image/novera.png"
+              alt="Noreva Logo"
+              className="object-contain"
+            />
           </Link>
 
           <nav className="hidden items-center gap-8 md:flex">
@@ -104,8 +108,14 @@ const Home = () => {
                       </p>
                     </div>
 
-                    <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold">
-                      Noreva
+                    <div className="rounded-lg border border-slate-200 px-2">
+                      <div className="flex h-10 w-15 ">
+                        <img
+                          src="/image/novera.png"
+                          alt="Noreva Logo"
+                          className="object-contain"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -254,9 +264,14 @@ const Home = () => {
       {/* Footer */}
       <footer className="border-t border-slate-200">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between lg:px-8">
-          <span className="font-semibold text-slate-900">Noreva</span>
-
-          <span>© 2026 Noreva. Portfolio demonstration.</span>
+          <Link to="/" className="flex h-10 w-20">
+            <img
+              src="/image/novera.png"
+              alt="Noreva Logo"
+              className="object-contain"
+            />
+          </Link>
+          <span>© 2026 Noreva. demonstration.</span>
         </div>
       </footer>
     </div>

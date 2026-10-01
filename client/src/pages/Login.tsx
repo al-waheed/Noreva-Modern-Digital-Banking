@@ -35,9 +35,13 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="mb-8">
           <div className="mb-6">
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-             Noreva
-            </span>
+            <Link to="/" className="tracking-tight text-slate-900">
+              <img
+                src="/image/novera.png"
+                alt="Noreva Logo"
+                className=" w-30 object-contain"
+              />
+            </Link>
           </div>
 
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">

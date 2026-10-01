@@ -64,9 +64,13 @@ const Register = () => {
         <div className="mb-8">
           <Link
             to="/"
-            className="text-xl font-bold tracking-tight text-slate-900"
+            className="tracking-tight text-slate-900"
           >
-            Noreva
+           <img
+              src="/image/novera.png"
+              alt="Noreva Logo"
+              className=" w-30 object-contain"
+            />
           </Link>
 
           <h1 className="mt-8 text-3xl font-semibold tracking-tight text-slate-900">
