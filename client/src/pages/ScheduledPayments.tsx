@@ -3,6 +3,8 @@ import { useEffect, useState, type SubmitEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import TransactionPinModal from "../components/TransactionPinModal";
+import CreateTransactionPinModal from "../components/CreateTransactionPinModal";
 
 interface ScheduledPayment {
   id: string;
@@ -18,15 +20,24 @@ interface ScheduledPayment {
   };
 }
 
+interface Recipient {
+  firstName: string;
+  lastName: string;
+  accountNumber: string;
+}
+
 const ScheduledPayments = () => {
-  const { token } = useAuth();
+  const { token, user, createTransactionPin } = useAuth();
   const navigate = useNavigate();
 
   const [payments, setPayments] = useState<ScheduledPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showCreatePinModal, setShowCreatePinModal] = useState(false);
 
   const [accountNumber, setAccountNumber] = useState("");
+  const [recipient, setRecipient] = useState<Recipient | null>(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
@@ -34,6 +45,8 @@ const ScheduledPayments = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [createPinError, setCreatePinError] = useState("");
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -64,11 +77,14 @@ const ScheduledPayments = () => {
 
   const resetForm = () => {
     setAccountNumber("");
+    setRecipient(null);
     setAmount("");
     setDescription("");
     setScheduledFor("");
     setFrequency("ONCE");
     setError("");
+    setPinError("");
+    setCreatePinError("");
   };
 
   const closeModal = () => {
@@ -78,15 +94,60 @@ const ScheduledPayments = () => {
     resetForm();
   };
 
-  const handleSubmit = async (event: SubmitEvent) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
+    setPinError("");
+    setCreatePinError("");
 
     if (!accountNumber || !amount || !scheduledFor) {
       setError("Please complete all required fields.");
       return;
     }
+
+    const paymentAmount = Number(amount);
+
+    if (!paymentAmount || paymentAmount <= 0) {
+      setError("Enter a valid amount.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const recipientResponse = await api.post(
+        "/transfers/recipient",
+        {
+          accountNumber,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const foundRecipient = recipientResponse.data.recipient;
+
+      setRecipient(foundRecipient);
+
+      if (user?.hasTransactionPin) {
+        setShowPinModal(true);
+      } else {
+        setShowCreatePinModal(true);
+      }
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message || "Unable to find this recipient.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const confirmScheduledPayment = async (transactionPin: string) => {
+    setPinError("");
 
     try {
       setIsSubmitting(true);
@@ -99,6 +160,7 @@ const ScheduledPayments = () => {
           description: description.trim() || undefined,
           scheduledFor,
           frequency,
+          transactionPin,
         },
         {
           headers: {
@@ -112,10 +174,37 @@ const ScheduledPayments = () => {
         response.data.payment,
       ]);
 
-      closeModal();
+      setShowPinModal(false);
+      setShowCreatePinModal(false);
+      setIsModalOpen(false);
+      resetForm();
     } catch (error: any) {
-      setError(error.response?.data?.message || "Unable to schedule payment.");
+      setPinError(
+        error.response?.data?.message ||
+          "Unable to schedule payment. Please try again.",
+      );
     } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreatePinSuccess = async (pin: string) => {
+    setCreatePinError("");
+
+    try {
+      setIsSubmitting(true);
+
+      await createTransactionPin(pin);
+
+      setShowCreatePinModal(false);
+
+      await confirmScheduledPayment(pin);
+    } catch (error: any) {
+      setCreatePinError(
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to create transaction PIN.",
+      );
       setIsSubmitting(false);
     }
   };
@@ -171,9 +260,9 @@ const ScheduledPayments = () => {
           </div>
         </div>
       </header>
+
       <div className="min-h-screen bg-slate-50">
         <main className="mx-auto max-w-6xl px-6 py-8">
-          {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-slate-500">Payments</p>
@@ -189,7 +278,10 @@ const ScheduledPayments = () => {
 
             <button
               type="button"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setError("");
+                setIsModalOpen(true);
+              }}
               className="flex cursor-pointer items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               <Plus className="h-4 w-4" />
@@ -197,14 +289,12 @@ const ScheduledPayments = () => {
             </button>
           </div>
 
-          {/* Error */}
           {error && !isModalOpen && (
             <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          {/* Payments */}
           <section className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {isLoading ? (
               <div className="p-8 text-center text-sm text-slate-500">
@@ -227,7 +317,10 @@ const ScheduledPayments = () => {
 
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={() => {
+                    setError("");
+                    setIsModalOpen(true);
+                  }}
                   className="mt-5 cursor-pointer rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >
                   Schedule your first payment
@@ -322,10 +415,9 @@ const ScheduledPayments = () => {
           </section>
         </main>
 
-        {/* Schedule payment modal */}
         {isModalOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+            className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 px-4"
             onClick={closeModal}
           >
             <div
@@ -346,7 +438,8 @@ const ScheduledPayments = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  disabled={isSubmitting}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -368,7 +461,11 @@ const ScheduledPayments = () => {
                     <input
                       type="text"
                       value={accountNumber}
-                      onChange={(event) => setAccountNumber(event.target.value)}
+                      onChange={(event) =>
+                        setAccountNumber(
+                          event.target.value.replace(/\D/g, "").slice(0, 10),
+                        )
+                      }
                       maxLength={10}
                       placeholder="Enter 10-digit account number"
                       className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
@@ -461,13 +558,48 @@ const ScheduledPayments = () => {
                     disabled={isSubmitting}
                     className="cursor-pointer rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isSubmitting ? "Scheduling..." : "Schedule payment"}
+                    Continue
                   </button>
                 </div>
               </form>
             </div>
           </div>
         )}
+
+        <TransactionPinModal
+          isOpen={showPinModal}
+          onClose={() => {
+            if (isSubmitting) return;
+
+            setShowPinModal(false);
+            setPinError("");
+          }}
+          onConfirm={confirmScheduledPayment}
+          title="Confirm scheduled payment"
+          description="Review the payment details and enter your PIN to authorize it."
+          recipientName={
+            recipient
+              ? `${recipient.firstName} ${recipient.lastName}`
+              : undefined
+          }
+          recipientAccountNumber={recipient?.accountNumber}
+          amount={Number(amount)}
+          isLoading={isSubmitting}
+          error={pinError}
+        />
+
+        <CreateTransactionPinModal
+          isOpen={showCreatePinModal}
+          onClose={() => {
+            if (isSubmitting) return;
+
+            setShowCreatePinModal(false);
+            setCreatePinError("");
+          }}
+          onSuccess={handleCreatePinSuccess}
+          isLoading={isSubmitting}
+          error={createPinError}
+        />
       </div>
     </div>
   );

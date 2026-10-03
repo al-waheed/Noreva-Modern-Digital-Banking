@@ -24,7 +24,6 @@ import {
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
 import ReceiveMoneyModal from "../components/ReceiveMoneyModal";
 import NotificationBell from "../components/NotificationBell";
 import api from "../lib/api";

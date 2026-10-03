@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import bcrypt from "bcrypt";
 import prisma from "../config/prisma";
 import { createNotification } from "../services/notification.service";
+import { verifyTransactionPin } from "../services/transactionPin.service";
 
 const recipientSchema = z.object({
   accountNumber: z.string().min(10).max(10),
@@ -123,38 +123,38 @@ export const transferMoney = async (
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: req.userId,
-      },
-      select: {
-        transactionPinHash: true,
-      },
-    });
+    // Verify the reusable Noreva Transaction PIN
+    try {
+      const pinIsValid = await verifyTransactionPin(req.userId, transactionPin);
 
-    if (!user) {
-      return res.status(404).json({
+      if (!pinIsValid) {
+        return res.status(401).json({
+          success: false,
+          message: "Incorrect transaction PIN",
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "USER_NOT_FOUND") {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        if (error.message === "PIN_NOT_SET") {
+          return res.status(400).json({
+            success: false,
+            message: "Transaction PIN has not been set",
+          });
+        }
+      }
+
+      console.error("Transaction PIN verification error:", error);
+
+      return res.status(500).json({
         success: false,
-        message: "User not found",
-      });
-    }
-
-    if (!user.transactionPinHash) {
-      return res.status(400).json({
-        success: false,
-        message: "Transaction PIN has not been set",
-      });
-    }
-
-    const pinIsValid = await bcrypt.compare(
-      transactionPin,
-      user.transactionPinHash,
-    );
-
-    if (!pinIsValid) {
-      return res.status(401).json({
-        success: false,
-        message: "Incorrect transaction PIN",
+        message: "Unable to verify transaction PIN",
       });
     }
 

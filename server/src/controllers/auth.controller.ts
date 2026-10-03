@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import prisma from "../config/prisma";
 import jwt from "jsonwebtoken";
+import { createTransactionPin } from "../services/transactionPin.service";
 
 const registerSchema = z.object({
   firstName: z.string().min(2),
@@ -420,12 +421,18 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
+
 export const setTransactionPin = async (
-  req: Request & { userId?: string },
+  req: AuthenticatedRequest,
   res: Response,
 ) => {
   try {
-    if (!req.userId) {
+    const userId = req.userId;
+
+    if (!userId) {
       return res.status(401).json({
         success: false,
         message: "Authentication required",
@@ -437,58 +444,40 @@ export const setTransactionPin = async (
     if (!result.success) {
       return res.status(400).json({
         success: false,
-        message: "PIN must be exactly 4 digits",
+        message: result.error.issues[0]?.message || "Invalid PIN",
       });
     }
 
     const { pin } = result.data;
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: req.userId,
-      },
-      select: {
-        id: true,
-        transactionPinHash: true,
-      },
-    });
+    await createTransactionPin(userId, pin);
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // A PIN can only be created once for now.
-    if (user.transactionPinHash) {
-      return res.status(409).json({
-        success: false,
-        message: "Transaction PIN has already been set",
-      });
-    }
-
-    const transactionPinHash = await bcrypt.hash(pin, 10);
-
-    await prisma.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        transactionPinHash,
-      },
-    });
-
-    return res.json({
+    return res.status(201).json({
       success: true,
       message: "Transaction PIN created successfully",
     });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "USER_NOT_FOUND") {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (error.message === "PIN_ALREADY_SET") {
+        return res.status(400).json({
+          success: false,
+          message: "Transaction PIN has already been set",
+        });
+      }
+    }
+
     console.error("Set transaction PIN error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Unable to create transaction PIN",
+      message: "Failed to create transaction PIN",
     });
   }
 };

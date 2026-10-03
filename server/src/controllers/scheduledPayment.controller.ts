@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../config/prisma";
+import { verifyTransactionPin } from "../services/transactionPin.service";
 
 const createScheduledPaymentSchema = z.object({
   accountNumber: z.string().min(10).max(10),
@@ -8,6 +9,9 @@ const createScheduledPaymentSchema = z.object({
   description: z.string().max(100).optional(),
   scheduledFor: z.string(),
   frequency: z.enum(["ONCE", "DAILY", "WEEKLY", "MONTHLY"]),
+  transactionPin: z
+    .string()
+    .regex(/^\d{4}$/, "Transaction PIN must be 4 digits"),
 });
 
 export const getScheduledPayments = async (
@@ -80,8 +84,55 @@ export const createScheduledPayment = async (
       });
     }
 
-    const { accountNumber, amount, description, scheduledFor, frequency } =
-      result.data;
+    const {
+      accountNumber,
+      amount,
+      description,
+      scheduledFor,
+      frequency,
+      transactionPin,
+    } = result.data;
+
+    // Verify the user's reusable transaction PIN.
+    try {
+      const pinIsValid = await verifyTransactionPin(
+        req.userId,
+        transactionPin,
+      );
+
+      if (!pinIsValid) {
+        return res.status(401).json({
+          success: false,
+          message: "Incorrect transaction PIN",
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "USER_NOT_FOUND") {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        if (error.message === "PIN_NOT_SET") {
+          return res.status(400).json({
+            success: false,
+            message: "Transaction PIN has not been set",
+          });
+        }
+      }
+
+      console.error(
+        "Scheduled payment transaction PIN verification error:",
+        error,
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify transaction PIN",
+      });
+    }
 
     const date = new Date(scheduledFor);
 

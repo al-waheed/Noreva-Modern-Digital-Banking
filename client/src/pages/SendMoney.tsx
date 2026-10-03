@@ -1,10 +1,12 @@
-import { ArrowLeft, CheckCircle2, Loader2, Send, User, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Send, User } from "lucide-react";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { sendTransferEmail } from "../lib/email";
 import api from "../lib/api";
+import TransactionPinModal from "../components/TransactionPinModal";
+import CreateTransactionPinModal from "../components/CreateTransactionPinModal";
 
 interface Recipient {
   firstName: string;
@@ -14,7 +16,7 @@ interface Recipient {
 
 const SendMoney = () => {
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, createTransactionPin } = useAuth();
 
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
@@ -29,8 +31,10 @@ const SendMoney = () => {
   const [success, setSuccess] = useState("");
 
   const [showPinModal, setShowPinModal] = useState(false);
-  const [transactionPin, setTransactionPin] = useState("");
+  const [showCreatePinModal, setShowCreatePinModal] = useState(false);
+
   const [pinError, setPinError] = useState("");
+  const [createPinError, setCreatePinError] = useState("");
 
   const findRecipient = async () => {
     setError("");
@@ -56,7 +60,9 @@ const SendMoney = () => {
 
       setRecipient(response.data.recipient);
     } catch (error: any) {
-      setError(error.response?.data?.message || "Unable to find this account.");
+      setError(
+        error.response?.data?.message || "Unable to find this account.",
+      );
     } finally {
       setIsSearching(false);
     }
@@ -81,17 +87,17 @@ const SendMoney = () => {
     }
 
     setPinError("");
-    setTransactionPin("");
-    setShowPinModal(true);
+
+    if (user?.hasTransactionPin) {
+      setShowPinModal(true);
+    } else {
+      setCreatePinError("");
+      setShowCreatePinModal(true);
+    }
   };
 
-  const confirmTransfer = async () => {
+  const confirmTransfer = async (transactionPin: string) => {
     setPinError("");
-
-    if (transactionPin.length !== 4) {
-      setPinError("Enter your 4-digit transaction PIN.");
-      return;
-    }
 
     if (!recipient) {
       setPinError("Recipient information is missing.");
@@ -136,7 +142,7 @@ const SendMoney = () => {
       }
 
       setShowPinModal(false);
-      setTransactionPin("");
+      setShowCreatePinModal(false);
 
       navigate(`/transactions/${transactionReference}`);
     } catch (error: any) {
@@ -144,6 +150,27 @@ const SendMoney = () => {
         error.response?.data?.message || "Transfer failed. Please try again.",
       );
     } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleCreatePinSuccess = async (pin: string) => {
+    setCreatePinError("");
+
+    try {
+      setIsSending(true);
+
+      await createTransactionPin(pin);
+
+      setShowCreatePinModal(false);
+
+      await confirmTransfer(pin);
+    } catch (error: any) {
+      setCreatePinError(
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to create transaction PIN.",
+      );
       setIsSending(false);
     }
   };
@@ -260,7 +287,9 @@ const SendMoney = () => {
           )}
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Amount</label>
+            <label className="text-sm font-medium text-slate-700">
+              Amount
+            </label>
 
             <div className="relative mt-2">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">
@@ -317,135 +346,38 @@ const SendMoney = () => {
         </form>
       </main>
 
-      {showPinModal && recipient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Confirm transfer
-                </h2>
+      {recipient && (
+        <TransactionPinModal
+          isOpen={showPinModal}
+          onClose={() => {
+            if (isSending) return;
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Enter your transaction PIN to authorize this payment.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (isSending) return;
-
-                  setShowPinModal(false);
-                  setTransactionPin("");
-                  setPinError("");
-                }}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-5 p-5">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white">
-                    <User size={19} />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-slate-500">Sending to</p>
-
-                    <p className="mt-0.5 text-sm font-semibold text-slate-900">
-                      {recipient.firstName} {recipient.lastName}
-                    </p>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {recipient.accountNumber}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 border-t border-slate-200 pt-4">
-                  <p className="text-xs text-slate-500">Amount</p>
-
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-                    ₦
-                    {Number(amount).toLocaleString("en-NG", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-slate-700">
-                  Transaction PIN
-                </label>
-
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={4}
-                  value={transactionPin}
-                  onChange={(event) => {
-                    setTransactionPin(
-                      event.target.value.replace(/\D/g, "").slice(0, 4),
-                    );
-                    setPinError("");
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      confirmTransfer();
-                    }
-                  }}
-                  placeholder="Enter 4-digit PIN"
-                  autoFocus
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-lg tracking-[0.5em] outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                />
-
-                {pinError && (
-                  <p className="mt-2 text-sm text-red-600">{pinError}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  disabled={isSending}
-                  onClick={() => {
-                    setShowPinModal(false);
-                    setTransactionPin("");
-                    setPinError("");
-                  }}
-                  className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSending || transactionPin.length !== 4}
-                  onClick={confirmTransfer}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSending ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Confirming...
-                    </>
-                  ) : (
-                    "Confirm transfer"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+            setShowPinModal(false);
+            setPinError("");
+          }}
+          onConfirm={confirmTransfer}
+          title="Confirm transfer"
+          description="Review the transfer details and enter your PIN to authorize it."
+          recipientName={`${recipient.firstName} ${recipient.lastName}`}
+          recipientAccountNumber={recipient.accountNumber}
+          amount={Number(amount)}
+          isLoading={isSending}
+          error={pinError}
+        />
       )}
+
+      <CreateTransactionPinModal
+        isOpen={showCreatePinModal}
+        onClose={() => {
+          if (isSending) return;
+
+          setShowCreatePinModal(false);
+          setCreatePinError("");
+        }}
+        onSuccess={handleCreatePinSuccess}
+        isLoading={isSending}
+        error={createPinError}
+      />
     </div>
   );
 };

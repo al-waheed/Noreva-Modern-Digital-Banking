@@ -38,6 +38,7 @@ interface AuthContextType {
     phone: string,
     password: string,
   ) => Promise<void>;
+  createTransactionPin: (pin: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -117,6 +118,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(response.data.user);
   };
 
+  const createTransactionPin = async (pin: string) => {
+    if (!token) {
+      throw new Error("Authentication required");
+    }
+
+    await api.post(
+      "/auth/transaction-pin",
+      {
+        pin,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    setUser((currentUser) =>
+      currentUser
+        ? {
+            ...currentUser,
+            hasTransactionPin: true,
+          }
+        : currentUser,
+    );
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
@@ -131,6 +159,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isLoading,
         login,
         register,
+        createTransactionPin,
         logout,
       }}
     >
