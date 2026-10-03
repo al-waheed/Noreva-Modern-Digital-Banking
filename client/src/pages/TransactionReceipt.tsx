@@ -58,8 +58,6 @@ const TransactionReceipt = () => {
           },
         });
 
-        console.log("Receipt transaction:", response.data.transaction);
-
         setTransaction(response.data.transaction);
       } catch (error) {
         console.error("Failed to load transaction:", error);

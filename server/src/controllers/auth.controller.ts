@@ -27,6 +27,10 @@ const resetPasswordSchema = z.object({
   password: z.string().min(6),
 });
 
+const transactionPinSchema = z.object({
+  pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits"),
+});
+
 const generateAccountNumber = () => {
   const timestamp = Date.now().toString().slice(-8);
   const random = Math.floor(10 + Math.random() * 90);
@@ -416,6 +420,79 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+export const setTransactionPin = async (
+  req: Request & { userId?: string },
+  res: Response,
+) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const result = transactionPinSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: "PIN must be exactly 4 digits",
+      });
+    }
+
+    const { pin } = result.data;
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: req.userId,
+      },
+      select: {
+        id: true,
+        transactionPinHash: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // A PIN can only be created once for now.
+    if (user.transactionPinHash) {
+      return res.status(409).json({
+        success: false,
+        message: "Transaction PIN has already been set",
+      });
+    }
+
+    const transactionPinHash = await bcrypt.hash(pin, 10);
+
+    await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        transactionPinHash,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: "Transaction PIN created successfully",
+    });
+  } catch (error) {
+    console.error("Set transaction PIN error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to create transaction PIN",
+    });
+  }
+};
+
 export const getMe = async (
   req: Request & { userId?: string },
   res: Response,
@@ -457,6 +534,7 @@ export const getMe = async (
         accountNumber: user.account?.accountNumber,
         balance: user.account?.wallet?.balance,
         cards: user.cards,
+        hasTransactionPin: Boolean(user.transactionPinHash),
       },
     });
   } catch (error) {

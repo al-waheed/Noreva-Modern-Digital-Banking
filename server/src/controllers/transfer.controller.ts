@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import bcrypt from "bcrypt";
 import prisma from "../config/prisma";
 import { createNotification } from "../services/notification.service";
 
@@ -11,6 +12,9 @@ const transferSchema = z.object({
   accountNumber: z.string().min(10).max(10),
   amount: z.number().positive(),
   description: z.string().max(100).optional(),
+  transactionPin: z
+    .string()
+    .regex(/^\d{4}$/, "Transaction PIN must be 4 digits"),
 });
 
 const generateReference = (prefix: string) => {
@@ -110,12 +114,47 @@ export const transferMoney = async (
       });
     }
 
-    const { accountNumber, amount, description } = result.data;
+    const { accountNumber, amount, description, transactionPin } = result.data;
 
     if (amount <= 0) {
       return res.status(400).json({
         success: false,
         message: "Amount must be greater than zero",
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: req.userId,
+      },
+      select: {
+        transactionPinHash: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!user.transactionPinHash) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction PIN has not been set",
+      });
+    }
+
+    const pinIsValid = await bcrypt.compare(
+      transactionPin,
+      user.transactionPinHash,
+    );
+
+    if (!pinIsValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect transaction PIN",
       });
     }
 

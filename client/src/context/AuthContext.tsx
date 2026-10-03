@@ -14,6 +14,7 @@ interface User {
   email: string;
   accountNumber?: string;
   balance?: number;
+  hasTransactionPin?: boolean;
   cards?: {
     id: string;
     cardNumber: string;

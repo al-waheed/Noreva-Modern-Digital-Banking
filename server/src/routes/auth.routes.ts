@@ -7,6 +7,7 @@ import {
   getMe,
   forgotPassword,
   resetPassword,
+  setTransactionPin,
 } from "../controllers/auth.controller";
 
 import { authenticate } from "../middleware/auth.middleware";
@@ -46,14 +47,27 @@ const resetPasswordLimiter = rateLimit({
   },
 });
 
+const transactionPinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many PIN creation attempts. Please try again later.",
+  },
+});
+
 router.post("/register", register);
-
 router.post("/login", loginLimiter, login);
-
 router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
-
 router.post("/reset-password", resetPasswordLimiter, resetPassword);
-
+router.post(
+  "/transaction-pin",
+  authenticate,
+  transactionPinLimiter,
+  setTransactionPin,
+);
 router.get("/me", authenticate, getMe);
 
 export default router;
