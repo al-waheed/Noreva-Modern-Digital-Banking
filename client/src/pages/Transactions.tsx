@@ -4,40 +4,36 @@ import {
   ArrowUpRight,
   ReceiptText,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
-
-interface Transaction {
-  id: string;
-  reference: string;
-  amount: string | number;
-  type: string;
-  status: string;
-  description?: string;
-  senderId?: string;
-  receiverId?: string;
-  createdAt: string;
-  sender?: {
-    firstName: string;
-    lastName: string;
-  };
-  receiver?: {
-    firstName: string;
-    lastName: string;
-  };
-}
+import type { AppDispatch, RootState } from "../store/store";
+import {
+  setTransactions,
+  setTransactionsLoading,
+} from "../store/slices/transactionsSlice";
 
 const Transactions = () => {
   const navigate = useNavigate();
   const { token, user } = useAuth();
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const { transactions, isLoading } = useSelector(
+    (state: RootState) => state.transactions,
+  );
 
   useEffect(() => {
     const fetchTransactions = async () => {
+      if (!token) {
+        dispatch(setTransactionsLoading(false));
+        return;
+      }
+
+      dispatch(setTransactionsLoading(true));
+
       try {
         const response = await api.get("/transactions", {
           headers: {
@@ -45,18 +41,16 @@ const Transactions = () => {
           },
         });
 
-        setTransactions(response.data.transactions);
+        dispatch(setTransactions(response.data.transactions));
       } catch (error) {
         console.error("Failed to load transactions:", error);
-      } finally {
-        setIsLoading(false);
+
+        dispatch(setTransactionsLoading(false));
       }
     };
 
-    if (token) {
-      fetchTransactions();
-    }
-  }, [token]);
+    fetchTransactions();
+  }, [token, dispatch]);
 
   const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -73,7 +67,7 @@ const Transactions = () => {
     }).format(new Date(date));
   };
 
-  const isReceived = (transaction: Transaction) => {
+  const isReceived = (transaction: (typeof transactions)[number]) => {
     return transaction.receiverId === user?.id;
   };
 

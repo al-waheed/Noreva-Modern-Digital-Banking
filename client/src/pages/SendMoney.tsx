@@ -2,6 +2,10 @@ import { ArrowLeft, CheckCircle2, Loader2, Send, User } from "lucide-react";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../store/store";
+import { applyOutgoingTransfer } from "../store/slices/dashboardSlice";
+import { addTransaction } from "../store/slices/transactionsSlice";
 import { useAuth } from "../context/AuthContext";
 import { sendTransferEmail } from "../lib/email";
 import api from "../lib/api";
@@ -16,6 +20,8 @@ interface Recipient {
 
 const SendMoney = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+
   const { token, user, createTransactionPin } = useAuth();
 
   const [accountNumber, setAccountNumber] = useState("");
@@ -60,9 +66,7 @@ const SendMoney = () => {
 
       setRecipient(response.data.recipient);
     } catch (error: any) {
-      setError(
-        error.response?.data?.message || "Unable to find this account.",
-      );
+      setError(error.response?.data?.message || "Unable to find this account.");
     } finally {
       setIsSearching(false);
     }
@@ -128,6 +132,31 @@ const SendMoney = () => {
 
       const transactionReference = transfer.senderTransaction.reference;
 
+      // Update Dashboard Redux data.
+      dispatch(
+        applyOutgoingTransfer({
+          balance: Number(transfer.senderBalance),
+          amount: Number(transfer.senderTransaction.amount),
+          transaction: transfer.senderTransaction,
+          recipient: {
+            firstName: transfer.recipient.firstName,
+            lastName: transfer.recipient.lastName,
+          },
+        }),
+      );
+
+      // Add the successful transfer to Transactions Redux data.
+      dispatch(
+        addTransaction({
+          ...transfer.senderTransaction,
+          receiver: {
+            firstName: transfer.recipient.firstName,
+            lastName: transfer.recipient.lastName,
+          },
+        }),
+      );
+
+      // Send receiver notification email.
       try {
         await sendTransferEmail({
           toEmail: transfer.recipient.email,
@@ -171,6 +200,7 @@ const SendMoney = () => {
           error.message ||
           "Unable to create transaction PIN.",
       );
+
       setIsSending(false);
     }
   };
@@ -287,9 +317,7 @@ const SendMoney = () => {
           )}
 
           <div>
-            <label className="text-sm font-medium text-slate-700">
-              Amount
-            </label>
+            <label className="text-sm font-medium text-slate-700">Amount</label>
 
             <div className="relative mt-2">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">

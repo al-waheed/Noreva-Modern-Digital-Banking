@@ -1,24 +1,18 @@
 import { ArrowLeft, CalendarClock, ChevronDown, Plus, X } from "lucide-react";
 import { useEffect, useState, type SubmitEvent } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import TransactionPinModal from "../components/TransactionPinModal";
 import CreateTransactionPinModal from "../components/CreateTransactionPinModal";
-
-interface ScheduledPayment {
-  id: string;
-  amount: string | number;
-  description?: string | null;
-  scheduledFor: string;
-  frequency: "ONCE" | "DAILY" | "WEEKLY" | "MONTHLY";
-  status: string;
-  receiver?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-}
+import type { AppDispatch, RootState } from "../store/store";
+import {
+  setScheduledPayments,
+  addScheduledPayment,
+  cancelScheduledPayment,
+  setScheduledPaymentsLoading,
+} from "../store/slices/scheduledPaymentsSlice";
 
 interface Recipient {
   firstName: string;
@@ -30,8 +24,12 @@ const ScheduledPayments = () => {
   const { token, user, createTransactionPin } = useAuth();
   const navigate = useNavigate();
 
-  const [payments, setPayments] = useState<ScheduledPayment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const { payments, isLoading } = useSelector(
+    (state: RootState) => state.scheduledPayments,
+  );
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [showCreatePinModal, setShowCreatePinModal] = useState(false);
@@ -51,9 +49,11 @@ const ScheduledPayments = () => {
   useEffect(() => {
     const loadPayments = async () => {
       if (!token) {
-        setIsLoading(false);
+        dispatch(setScheduledPaymentsLoading(false));
         return;
       }
+
+      dispatch(setScheduledPaymentsLoading(true));
 
       try {
         const response = await api.get("/scheduled-payments", {
@@ -62,18 +62,18 @@ const ScheduledPayments = () => {
           },
         });
 
-        setPayments(response.data.payments);
+        dispatch(setScheduledPayments(response.data.payments));
       } catch (error: any) {
         setError(
           error.response?.data?.message || "Unable to load scheduled payments.",
         );
-      } finally {
-        setIsLoading(false);
+
+        dispatch(setScheduledPaymentsLoading(false));
       }
     };
 
     loadPayments();
-  }, [token]);
+  }, [token, dispatch]);
 
   const resetForm = () => {
     setAccountNumber("");
@@ -169,10 +169,7 @@ const ScheduledPayments = () => {
         },
       );
 
-      setPayments((currentPayments) => [
-        ...currentPayments,
-        response.data.payment,
-      ]);
+      dispatch(addScheduledPayment(response.data.payment));
 
       setShowPinModal(false);
       setShowCreatePinModal(false);
@@ -221,11 +218,7 @@ const ScheduledPayments = () => {
         },
       );
 
-      setPayments((currentPayments) =>
-        currentPayments.map((payment) =>
-          payment.id === id ? { ...payment, status: "FAILED" } : payment,
-        ),
-      );
+      dispatch(cancelScheduledPayment(id));
     } catch (error: any) {
       setError(error.response?.data?.message || "Unable to cancel payment.");
     }

@@ -1,23 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, Check, X } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../store/store";
+import {
+  setNotifications,
+  markNotificationAsRead,
+} from "../store/slices/notificationSlice";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-}
-
 const NotificationBell = () => {
   const { token } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
+  const { notifications, unreadCount } = useSelector(
+    (state: RootState) => state.notifications,
+  );
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,8 +30,12 @@ const NotificationBell = () => {
           },
         });
 
-        setNotifications(response.data.notifications);
-        setUnreadCount(response.data.unreadCount);
+        dispatch(
+          setNotifications({
+            notifications: response.data.notifications,
+            unreadCount: response.data.unreadCount,
+          }),
+        );
       } catch (error) {
         console.error("Unable to load notifications:", error);
       }
@@ -45,7 +48,7 @@ const NotificationBell = () => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,15 +79,7 @@ const NotificationBell = () => {
         },
       );
 
-      setNotifications((current) =>
-        current.map((notification) =>
-          notification.id === id
-            ? { ...notification, read: true }
-            : notification,
-        ),
-      );
-
-      setUnreadCount((current) => Math.max(current - 1, 0));
+      dispatch(markNotificationAsRead(id));
     } catch (error) {
       console.error("Unable to mark notification as read:", error);
     }
@@ -106,7 +101,7 @@ const NotificationBell = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-3 w-360px overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute right-0 z-50 mt-3 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <div>
               <h3 className="font-semibold text-slate-900">Notifications</h3>

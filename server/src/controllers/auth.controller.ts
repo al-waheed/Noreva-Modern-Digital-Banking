@@ -33,10 +33,10 @@ const transactionPinSchema = z.object({
 });
 
 const generateAccountNumber = () => {
-  const timestamp = Date.now().toString().slice(-8);
+  const timestamp = Date.now().toString().slice(-6);
   const random = Math.floor(10 + Math.random() * 90);
 
-  return `${random}${timestamp}`;
+  return `02${random}${timestamp}`;
 };
 
 const generateCardNumber = () => {

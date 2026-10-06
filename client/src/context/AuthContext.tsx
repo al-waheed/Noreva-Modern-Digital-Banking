@@ -3,9 +3,23 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   type ReactNode,
 } from "react";
+import { useDispatch } from "react-redux";
 import api from "../lib/api";
+import type { AppDispatch } from "../store/store";
+
+import {
+  setDashboardData,
+  clearDashboardData,
+} from "../store/slices/dashboardSlice";
+
+import { clearTransactions } from "../store/slices/transactionsSlice";
+
+import { clearScheduledPayments } from "../store/slices/scheduledPaymentsSlice";
+
+import { clearNotifications } from "../store/slices/notificationSlice";
 
 interface User {
   id: string;
@@ -39,6 +53,7 @@ interface AuthContextType {
     password: string,
   ) => Promise<void>;
   createTransactionPin: (pin: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: () => void;
 }
 
@@ -49,39 +64,89 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const dispatch = useDispatch<AppDispatch>();
+
   const [user, setUser] = useState<User | null>(null);
+
   const [token, setToken] = useState<string | null>(
     localStorage.getItem("token"),
   );
+
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshUser = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    const response = await api.get("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setUser(response.data.user);
+  }, [token]);
+
+  const loadDashboardData = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    const response = await api.get("/dashboard", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const dashboard = response.data;
+
+    dispatch(
+      setDashboardData({
+        balance: Number(dashboard.account.balance),
+        moneyReceived: Number(dashboard.stats.moneyReceived),
+        moneySent: Number(dashboard.stats.moneySent),
+        transactionCount: Number(dashboard.stats.transactionCount),
+        monthlyActivity: dashboard.monthlyActivity,
+        recentTransactions: dashboard.transactions,
+      }),
+    );
+  }, [token, dispatch]);
+
   useEffect(() => {
-    const fetchUser = async () => {
+    const initializeApp = async () => {
       if (!token) {
+        dispatch(clearDashboardData());
+        dispatch(clearTransactions());
+        dispatch(clearScheduledPayments());
+        dispatch(clearNotifications());
+
         setIsLoading(false);
         return;
       }
 
       try {
-        const response = await api.get("/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        await refreshUser();
+        await loadDashboardData();
+      } catch (error) {
+        console.log(error);
 
-        setUser(response.data.user);
-      } catch (e) {
-        console.log(e);
         localStorage.removeItem("token");
+
         setToken(null);
         setUser(null);
+
+        dispatch(clearDashboardData());
+        dispatch(clearTransactions());
+        dispatch(clearScheduledPayments());
+        dispatch(clearNotifications());
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUser();
-  }, [token]);
+    initializeApp();
+  }, [token, refreshUser, loadDashboardData, dispatch]);
 
   const login = async (email: string, password: string) => {
     const response = await api.post("/auth/login", {
@@ -92,6 +157,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const newToken = response.data.token;
 
     localStorage.setItem("token", newToken);
+
     setToken(newToken);
     setUser(response.data.user);
   };
@@ -114,6 +180,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const newToken = response.data.token;
 
     localStorage.setItem("token", newToken);
+
     setToken(newToken);
     setUser(response.data.user);
   };
@@ -147,8 +214,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = () => {
     localStorage.removeItem("token");
+
     setToken(null);
     setUser(null);
+
+    // Clear all user-specific Redux data.
+    dispatch(clearDashboardData());
+    dispatch(clearTransactions());
+    dispatch(clearScheduledPayments());
+    dispatch(clearNotifications());
   };
 
   return (
@@ -160,6 +234,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         login,
         register,
         createTransactionPin,
+        refreshUser,
         logout,
       }}
     >
