@@ -1,11 +1,13 @@
-import { ArrowLeft, CalendarClock, ChevronDown, Plus, X } from "lucide-react";
+import { CalendarClock, ChevronDown, Plus, X } from "lucide-react";
 import { useEffect, useState, type SubmitEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import PageHeader from "../components/PageHeader";
 import TransactionPinModal from "../components/TransactionPinModal";
 import CreateTransactionPinModal from "../components/CreateTransactionPinModal";
+import { formatCurrency } from "../utils/formatters";
 import type { AppDispatch, RootState } from "../store/store";
 import {
   setScheduledPayments,
@@ -224,26 +226,15 @@ const ScheduledPayments = () => {
     }
   };
 
-  const formatCurrency = (value: string | number) =>
-    `₦${Number(value).toLocaleString("en-NG", {
-      minimumFractionDigits: 2,
-    })}`;
-
   const formatFrequency = (value: string) =>
     value.charAt(0) + value.slice(1).toLowerCase();
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft size={18} />
-            Back to dashboard
-          </button>
-
+      <PageHeader
+        onBack={() => navigate("/dashboard")}
+        backLabel="Back to dashboard"
+        rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
               src="/image/novera.png"
@@ -251,8 +242,8 @@ const ScheduledPayments = () => {
               className="object-contain"
             />
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <div className="min-h-screen bg-slate-50">
         <main className="mx-auto max-w-6xl px-6 py-8">

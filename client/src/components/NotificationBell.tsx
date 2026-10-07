@@ -6,18 +6,22 @@ import {
   setNotifications,
   markNotificationAsRead,
 } from "../store/slices/notificationSlice";
+import { setDashboardData } from "../store/slices/dashboardSlice";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const NotificationBell = () => {
   const { token } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
+
   const { notifications, unreadCount } = useSelector(
     (state: RootState) => state.notifications,
   );
 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const previousNotificationIds = useRef<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -30,12 +34,50 @@ const NotificationBell = () => {
           },
         });
 
+        const newNotifications = response.data.notifications;
+
+        const previousIds = previousNotificationIds.current;
+
+        const hasNewNotification =
+          previousIds.length > 0 &&
+          newNotifications.some(
+            (notification: { id: string }) =>
+              !previousIds.includes(notification.id),
+          );
+
         dispatch(
           setNotifications({
-            notifications: response.data.notifications,
+            notifications: newNotifications,
             unreadCount: response.data.unreadCount,
           }),
         );
+
+        previousNotificationIds.current = newNotifications.map(
+          (notification: { id: string }) => notification.id,
+        );
+
+        // A new notification can mean the user received money.
+        // Refresh the existing dashboard data and update Redux.
+        if (hasNewNotification) {
+          const dashboardResponse = await api.get("/dashboard", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const dashboard = dashboardResponse.data;
+
+          dispatch(
+            setDashboardData({
+              balance: Number(dashboard.account.balance),
+              moneyReceived: Number(dashboard.stats.moneyReceived),
+              moneySent: Number(dashboard.stats.moneySent),
+              transactionCount: Number(dashboard.stats.transactionCount),
+              monthlyActivity: dashboard.monthlyActivity,
+              recentTransactions: dashboard.transactions,
+            }),
+          );
+        }
       } catch (error) {
         console.error("Unable to load notifications:", error);
       }
@@ -101,7 +143,7 @@ const NotificationBell = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-3 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute right-0 z-50 mt-3 w-90 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <div>
               <h3 className="font-semibold text-slate-900">Notifications</h3>
@@ -122,9 +164,11 @@ const NotificationBell = () => {
             {notifications.length === 0 ? (
               <div className="px-5 py-10 text-center">
                 <Bell className="mx-auto h-6 w-6 text-slate-300" />
+
                 <p className="mt-3 text-sm font-medium text-slate-700">
                   No notifications
                 </p>
+
                 <p className="mt-1 text-xs text-slate-500">
                   You're all caught up.
                 </p>

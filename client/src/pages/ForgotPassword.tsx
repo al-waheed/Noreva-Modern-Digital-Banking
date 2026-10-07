@@ -1,10 +1,13 @@
-import { ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
+import { CheckCircle2, Loader2, Mail } from "lucide-react";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import PageHeader from "../components/PageHeader";
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -42,16 +45,10 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-20 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <Link
-            to="/login"
-            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft size={18} />
-            Back to login
-          </Link>
-
+      <PageHeader
+        onBack={() => navigate("/login")}
+        backLabel="Back to login"
+        rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
               src="/image/novera.png"
@@ -59,8 +56,8 @@ const ForgotPassword = () => {
               className="object-contain"
             />
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
@@ -135,12 +132,13 @@ const ForgotPassword = () => {
 
           <p className="mt-6 text-center text-sm text-slate-500">
             Remember your password?{" "}
-            <Link
-              to="/login"
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
               className="font-medium text-slate-900 hover:underline"
             >
               Sign in
-            </Link>
+            </button>
           </p>
         </div>
       </main>

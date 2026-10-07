@@ -5,11 +5,11 @@ import {
   Lock,
   ShieldCheck,
   Unlock,
-  ArrowLeft,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 
 const Cards = () => {
   const { user } = useAuth();
@@ -61,25 +61,19 @@ const Cards = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft size={18} />
-            Back to dashboard
-          </button>
-
-           <div className="flex h-10 w-25 items-center justify-center">
-             <img
+      <PageHeader
+        onBack={() => navigate("/dashboard")}
+        backLabel="Back to dashboard"
+        rightContent={
+          <div className="flex h-10 w-25 items-center justify-center">
+            <img
               src="/image/novera.png"
               alt="Noreva Logo"
               className="object-contain"
             />
           </div>
-        </div>
-      </header>
+        }
+      />
       <div className="min-h-screen bg-slate-50">
         <main className="mx-auto max-w-6xl px-6 py-8">
           {/* Header */}

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   CheckCircle2,
   Copy,
   Download,
@@ -10,6 +9,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useAuth } from "../context/AuthContext";
+import PageHeader from "../components/PageHeader";
+import { formatCurrency, formatDate } from "../utils/formatters";
 import api from "../lib/api";
 
 interface Transaction {
@@ -70,21 +71,6 @@ const TransactionReceipt = () => {
       fetchTransaction();
     }
   }, [token, reference]);
-
-  const formatCurrency = (amount: string | number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 2,
-    }).format(Number(amount));
-  };
-
-  const formatDate = (date: string) => {
-    return new Intl.DateTimeFormat("en-NG", {
-      dateStyle: "long",
-      timeStyle: "short",
-    }).format(new Date(date));
-  };
 
   const copyReference = async () => {
     if (!transaction) return;
@@ -514,18 +500,10 @@ const TransactionReceipt = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* HEADER */}
-
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-20 max-w-3xl items-center justify-between px-4 sm:px-6">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft size={18} />
-            Dashboard
-          </button>
-
+      <PageHeader
+        onBack={() => navigate("/dashboard")}
+        backLabel="Dashboard"
+        rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
               src="/image/novera.png"
@@ -533,8 +511,8 @@ const TransactionReceipt = () => {
               className="object-contain"
             />
           </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* MAIN */}
 
@@ -613,7 +591,7 @@ const TransactionReceipt = () => {
               <span className="text-sm text-slate-500">Date</span>
 
               <span className="text-right text-sm font-medium">
-                {formatDate(transaction.createdAt)}
+                {formatDate(transaction.createdAt, "long")}
               </span>
             </div>
 

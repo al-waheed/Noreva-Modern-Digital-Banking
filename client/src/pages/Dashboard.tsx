@@ -28,6 +28,11 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../store/store";
 import ReceiveMoneyModal from "../components/ReceiveMoneyModal";
 import NotificationBell from "../components/NotificationBell";
+import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
+import Panel from "../components/Panel";
+import QuickActionButton from "../components/QuickActionButton";
+import { formatCurrency } from "../utils/formatters";
 
 const Dashboard = () => {
   const { logout, user } = useAuth();
@@ -42,14 +47,6 @@ const Dashboard = () => {
   const firstName = user?.firstName;
   const balance = Number(dashboard?.balance || user?.balance || 0);
   const accountNumber = user?.accountNumber;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -226,98 +223,73 @@ const Dashboard = () => {
             </section>
 
             {/* Quick actions */}
-            <section className="rounded-xl border border-slate-200 bg-white p-5">
-              <p className="text-sm font-semibold text-slate-900">
-                Quick actions
-              </p>
-
+            <Panel header={<p className="text-sm font-semibold text-slate-900">Quick actions</p>}>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <button
+                <QuickActionButton
+                  icon={<ArrowUpRight size={18} />}
+                  label="Send money"
                   onClick={() => navigate("/send-money")}
-                  className="flex flex-col items-center justify-center gap-2 rounded-lg border border-slate-200 p-4 text-sm font-medium hover:bg-slate-50"
-                >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
-                    <ArrowUpRight size={18} />
-                  </span>
-                  Send money
-                </button>
+                />
 
-                <button
+                <QuickActionButton
+                  icon={<ArrowDownLeft size={18} />}
+                  label="Receive"
                   onClick={() => setIsReceiveOpen(true)}
-                  className="flex flex-col items-center justify-center gap-2 rounded-lg border border-slate-200 p-4 text-sm font-medium hover:bg-slate-50"
-                >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
-                    <ArrowDownLeft size={18} />
-                  </span>
-                  Receive
-                </button>
+                />
 
-                <button
-                  type="button"
+                <QuickActionButton
+                  icon={<CreditCard size={18} />}
+                  label="Cards"
                   onClick={() => navigate("/cards")}
-                  className="flex flex-col items-center justify-center gap-2 rounded-lg border border-slate-200 p-4 text-sm font-medium hover:bg-slate-50"
-                >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
-                    <CreditCard size={18} />
-                  </span>
-                  Cards
-                </button>
+                />
 
-                <button
+                <QuickActionButton
+                  icon={<ReceiptText size={18} />}
+                  label="History"
                   onClick={() => navigate("/transactions")}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 p-4 text-sm font-medium hover:bg-slate-50"
-                >
-                  <ReceiptText size={18} />
-                  History
-                </button>
+                  fullWidth
+                />
               </div>
-            </section>
+            </Panel>
           </div>
 
           {/* Stats */}
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <p className="text-sm text-slate-500">Money received</p>
-
-              <p className="mt-2 text-xl font-semibold text-slate-900">
-                ₦
-                {Number(dashboard?.moneyReceived || 0).toLocaleString("en-NG", {
+            <StatCard
+              label="Money received"
+              value={`₦${Number(dashboard?.moneyReceived || 0).toLocaleString(
+                "en-NG",
+                {
                   minimumFractionDigits: 2,
-                })}
-              </p>
+                },
+              )}`}
+              caption="This month"
+            />
 
-              <p className="mt-1 text-xs text-slate-400">This month</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <p className="text-sm text-slate-500">Money sent</p>
-
-              <p className="mt-2 text-xl font-semibold text-slate-900">
-                ₦
-                {Number(dashboard?.moneySent || 0).toLocaleString("en-NG", {
+            <StatCard
+              label="Money sent"
+              value={`₦${Number(dashboard?.moneySent || 0).toLocaleString(
+                "en-NG",
+                {
                   minimumFractionDigits: 2,
-                })}
-              </p>
+                },
+              )}`}
+              caption="This month"
+            />
 
-              <p className="mt-1 text-xs text-slate-400">This month</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <p className="text-sm text-slate-500">Transactions</p>
-
-              <p className="mt-2 text-xl font-semibold text-slate-900">
-                {dashboard?.transactionCount || 0}
-              </p>
-
-              <p className="mt-1 text-xs text-slate-400">This month</p>
-            </div>
+            <StatCard
+              label="Transactions"
+              value={dashboard?.transactionCount || 0}
+              caption="This month"
+            />
           </div>
 
           {/* Lower section */}
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
             {/* Chart */}
-            <section className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
-              <div className="flex items-center justify-between">
+            <Panel
+              className="lg:col-span-2"
+              header={
                 <div>
                   <h2 className="font-semibold text-slate-900">
                     Account activity
@@ -327,15 +299,16 @@ const Dashboard = () => {
                     Your transaction activity over time
                   </p>
                 </div>
-
+              }
+              headerAction={
                 <button
                   type="button"
                   className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
                 >
                   <MoreHorizontal size={18} />
                 </button>
-              </div>
-
+              }
+            >
               <div className="mt-6 h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -377,29 +350,30 @@ const Dashboard = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </section>
+            </Panel>
 
             {/* Recent transactions */}
-            <section className="rounded-xl border border-slate-200 bg-white p-5">
-              <div className="flex items-start justify-between">
+            <Panel
+              header={
                 <div>
                   <h2 className="font-semibold text-slate-900">
                     Recent transactions
                   </h2>
                 </div>
-
+              }
+              headerAction={
                 <button
                   onClick={() => navigate("/transactions")}
                   className="text-sm font-medium text-slate-700 hover:text-slate-950"
                 >
                   View all
                 </button>
-              </div>
-
+              }
+            >
               <div className="mt-5 space-y-4">
-                {dashboard?.recentTransactions?.length > 0 ? (
+                {dashboard?.recentTransactions?.length ? (
                   dashboard.recentTransactions
-                    .slice(0, 5)
+                    ?.slice(0, 5)
                     .map((transaction) => {
                       const isReceived = transaction.receiverId === user?.id;
 
@@ -467,16 +441,14 @@ const Dashboard = () => {
                       );
                     })
                 ) : (
-                  <div className="py-8 text-center">
-                    <ReceiptText size={22} className="mx-auto text-slate-300" />
-
-                    <p className="mt-3 text-sm text-slate-500">
-                      No transactions yet
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={<ReceiptText size={22} className="text-slate-300" />}
+                    title="No transactions yet"
+                    containerClassName="py-8 text-center"
+                  />
                 )}
               </div>
-            </section>
+            </Panel>
           </div>
         </main>
       </div>

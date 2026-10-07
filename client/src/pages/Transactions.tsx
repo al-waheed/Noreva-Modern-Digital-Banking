@@ -1,12 +1,12 @@
-import {
-  ArrowDownLeft,
-  ArrowLeft,
-  ArrowUpRight,
-  ReceiptText,
-} from "lucide-react";
-import { useEffect } from "react";
+import { ReceiptText, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { TransactionFilters } from "../components/transactions/TransactionFilters";
+import { TransactionPagination } from "../components/transactions/TransactionPagination";
+import { TransactionSummary } from "../components/transactions/TransactionSummary";
+import { TransactionTable } from "../components/transactions/TransactionTable";
+import PageHeader from "../components/PageHeader";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
 import type { AppDispatch, RootState } from "../store/store";
@@ -14,16 +14,21 @@ import {
   setTransactions,
   setTransactionsLoading,
 } from "../store/slices/transactionsSlice";
+import { useTransactionFilters } from "../hooks/useTransactionFilters";
+import { downloadTransactionPdf } from "../utils/transactionPdf";
+import { formatCurrency, formatDate } from "../utils/formatters";
+import EmptyState from "../components/EmptyState";
 
 const Transactions = () => {
   const navigate = useNavigate();
   const { token, user } = useAuth();
-
   const dispatch = useDispatch<AppDispatch>();
 
   const { transactions, isLoading } = useSelector(
     (state: RootState) => state.transactions,
   );
+
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -52,37 +57,48 @@ const Transactions = () => {
     fetchTransactions();
   }, [token, dispatch]);
 
-  const formatCurrency = (amount: string | number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 2,
-    }).format(Number(amount));
-  };
+  const {
+    search,
+    setSearch,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
+    currentPage,
+    setCurrentPage,
+    filteredTransactions,
+    paginatedTransactions,
+    totalPages,
+    hasFilters,
+    clearFilters,
+    totalReceived,
+    totalSent,
+    isReceived,
+  } = useTransactionFilters({
+    transactions,
+    userId: user?.id,
+  });
 
-  const formatDate = (date: string) => {
-    return new Intl.DateTimeFormat("en-NG", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(date));
-  };
-
-  const isReceived = (transaction: (typeof transactions)[number]) => {
-    return transaction.receiverId === user?.id;
+  const handleDownloadPdf = () => {
+    downloadTransactionPdf({
+      filteredTransactions,
+      totalReceived,
+      totalSent,
+      hasFilters,
+      user,
+      isReceived,
+      formatCurrency,
+      setIsDownloading,
+      fromDate,
+      toDate,
+    });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft size={18} />
-            Back to dashboard
-          </button>
-
+      <PageHeader
+        onBack={() => navigate("/dashboard")}
+        rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
               src="/image/novera.png"
@@ -90,8 +106,8 @@ const Transactions = () => {
               className="object-contain"
             />
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="mb-8">
@@ -106,123 +122,81 @@ const Transactions = () => {
           </p>
         </div>
 
+        {!isLoading && transactions.length > 0 && (
+          <>
+            <TransactionFilters
+              search={search}
+              setSearch={setSearch}
+              fromDate={fromDate}
+              setFromDate={setFromDate}
+              toDate={toDate}
+              setToDate={setToDate}
+              hasFilters={hasFilters}
+              clearFilters={clearFilters}
+              filteredTransactionsLength={filteredTransactions.length}
+              isDownloading={isDownloading}
+              onDownload={handleDownloadPdf}
+            />
+
+            <TransactionSummary
+              filteredTransactionsLength={filteredTransactions.length}
+              currentPage={currentPage}
+              itemsPerPage={10}
+              hasFilters={hasFilters}
+            />
+          </>
+        )}
+
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           {isLoading ? (
             <div className="flex min-h-64 items-center justify-center">
               <p className="text-sm text-slate-500">Loading transactions...</p>
             </div>
           ) : transactions.length === 0 ? (
-            <div className="flex min-h-64 flex-col items-center justify-center px-6 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                <ReceiptText size={21} className="text-slate-400" />
-              </div>
-
-              <p className="mt-4 text-sm font-semibold text-slate-700">
-                No transactions yet
-              </p>
-
-              <p className="mt-1 max-w-sm text-sm text-slate-400">
-                Your transfers will appear here once you send or receive money.
-              </p>
-            </div>
+            <EmptyState
+              icon={<ReceiptText size={21} className="text-slate-400" />}
+              title="No transactions yet"
+              description="Your transfers will appear here once you send or receive money."
+            />
+          ) : filteredTransactions.length === 0 ? (
+            <EmptyState
+              icon={<Search size={21} className="text-slate-400" />}
+              title="No matching transactions"
+              description="Try changing your search or date filters."
+              action={
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-4 text-sm font-medium text-slate-700 hover:text-slate-950"
+                >
+                  Clear filters
+                </button>
+              }
+            />
           ) : (
             <>
-              <div className="hidden border-b border-slate-200 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-400 md:grid md:grid-cols-[2fr_1.5fr_1fr_1fr_auto]">
-                <span>Transaction</span>
-                <span>Date</span>
-                <span>Status</span>
-                <span className="text-right">Amount</span>
-                <span></span>
-              </div>
+              <TransactionTable
+                transactions={paginatedTransactions}
+                formatCurrency={formatCurrency}
+                formatDate={formatDate}
+                isReceived={isReceived}
+                onViewReceipt={(reference) =>
+                  navigate(`/transactions/${reference}`)
+                }
+              />
 
-              <div className="divide-y divide-slate-100">
-                {transactions.map((transaction) => {
-                  const received = isReceived(transaction);
-
-                  const otherPerson = received
-                    ? transaction.sender
-                    : transaction.receiver;
-
-                  const isSuccessful =
-                    transaction.status.toLowerCase() === "success";
-
-                  return (
-                    <div
-                      key={transaction.id}
-                      className="grid gap-4 px-5 py-5 md:grid-cols-[2fr_1.5fr_1fr_1fr_auto] md:items-center md:px-6"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                            received
-                              ? "bg-slate-100 text-slate-700"
-                              : "bg-slate-900 text-white"
-                          }`}
-                        >
-                          {received ? (
-                            <ArrowDownLeft size={18} />
-                          ) : (
-                            <ArrowUpRight size={18} />
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-slate-800">
-                            {received ? "Money received" : "Money sent"}
-                          </p>
-
-                          <p className="truncate text-xs text-slate-500">
-                            {otherPerson
-                              ? `${otherPerson.firstName} ${otherPerson.lastName}`
-                              : transaction.description || "Transfer"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-slate-600">
-                          {formatDate(transaction.createdAt)}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-400">
-                          {transaction.reference}
-                        </p>
-                      </div>
-
-                      <div>
-                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">
-                          {transaction.status.toLowerCase()}
-                        </span>
-                      </div>
-
-                      <div className="text-left md:text-right">
-                        <p
-                          className={`text-sm font-semibold ${
-                            received ? "text-slate-900" : "text-slate-700"
-                          }`}
-                        >
-                          {received ? "+" : "-"}
-                          {formatCurrency(transaction.amount)}
-                        </p>
-                      </div>
-
-                      <div>
-                        {isSuccessful && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/transactions/${transaction.reference}`)
-                            }
-                            className="whitespace-nowrap text-sm font-medium text-slate-700 hover:text-slate-950"
-                          >
-                            View receipt
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {totalPages > 1 && (
+                <TransactionPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPrevious={() =>
+                    setCurrentPage((page) => Math.max(page - 1, 1))
+                  }
+                  onNext={() =>
+                    setCurrentPage((page) => Math.min(page + 1, totalPages))
+                  }
+                />
+              )}
             </>
           )}
         </section>

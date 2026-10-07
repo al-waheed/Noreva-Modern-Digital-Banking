@@ -2,7 +2,7 @@
 
 Noreva is a fintech web application built to simulate a modern digital banking experience for Nigerian users.
 
-It demonstrates a full-stack banking workflow including authentication, digital wallets, money transfers, transaction history, virtual cards, scheduled payments, notifications, and password recovery.
+It demonstrates a full stack banking workflow including authentication, digital wallets, money transfers, transaction history, transaction PIN protection, virtual cards, scheduled payments, notifications, password recovery, and financial reporting.
 
 > **Note:** Noreva is a demo application. It does not process real money or connect to real banking infrastructure.
 
@@ -20,105 +20,128 @@ It demonstrates a full-stack banking workflow including authentication, digital 
 
 ### Authentication
 
-* User registration and login
-* JWT-based authentication
-* Protected routes
-* Password visibility toggle
-* Forgot password
-* Secure password reset links
-* Password hashing with bcrypt
-* Authentication rate limiting
+- User registration and login
+- JWT-based authentication
+- Protected routes
+- Password visibility toggle
+- Forgot password
+- Secure password reset links
+- Password hashing with bcrypt
+- Authentication rate limiting
 
 ### Digital Wallet
 
-* Automatic account creation
-* Demo wallet with ₦100,000 starting balance
-* Unique account number
-* Real-time wallet balance updates
+- Automatic account creation
+- Demo wallet with ₦100,000 starting balance
+- Unique account number
+- Centralized financial state management
+- Real-time wallet balance updates
+
+### Transaction PIN
+
+- Create a secure transaction PIN
+- Transaction PIN required before sending money
+- Server side PIN verification
+- PIN hashing
+- Protection against unauthorized transfers
 
 ### Money Transfers
 
-* Search for registered recipients
-* Send money between Noreva users
-* Self-transfer prevention
-* Insufficient-balance protection
-* Atomic wallet balance updates
-* Transaction references
-* Sender and receiver transaction records
-* Transfer notifications
+- Search for registered recipients
+- Send money between Noreva users
+- Self transfer prevention
+- Insufficient-balance protection
+- Atomic wallet balance updates
+- Transaction references
+- Sender and receiver transaction records
+- In app transfer notifications
+- Email notifications for received transfers
 
 ### Transactions
 
-* Transaction history
-* Transaction details
-* Transaction reference numbers
-* Debit and credit records
-* Transaction receipts
-* Receipt download
+- Complete transaction history
+- Transaction details
+- Search transactions
+- Filter transactions by date
+- Pagination with 10 transactions per page
+- Transaction reference numbers
+- Debit and credit records
+- Transaction status
+- Transaction receipts
+- Receipt download
+- Download filtered transaction history as a PDF statement
+- Statement summary showing total received, total sent, and transaction count
 
 ### Cards
 
-* Virtual card
-* Card number, expiry date and CVV
-* Show/hide card details
-* Copy card details
-* Freeze/unfreeze card
-* Physical card interface for future expansion
+- Virtual card
+- Card number, expiry date and CVV
+- Show/hide card details
+- Copy card details
+- Freeze/unfreeze card
+- Physical card interface for future expansion
 
 ### Scheduled Payments
 
-* Create scheduled payments
-* View scheduled payments
-* Cancel scheduled payments
-* Automatic scheduled-payment processing
+- Create scheduled payments
+- View scheduled payments
+- Cancel scheduled payments
+- Automatic scheduled-payment processing
+- Support for one-time and recurring payments
 
 ### Notifications
 
-* In-app notification centre
-* Unread notification count
-* Mark notifications as read
-* Transfer notifications
-* Email notifications
+- In app notification centre
+- Unread notification count
+- Mark notifications as read
+- Transfer notifications
+- Email notifications
+- Automatic financial data refresh when new incoming transfer notifications are detected
 
 ### Dashboard
 
-* Available balance
-* Account information
-* Financial statistics
-* Transaction overview
-* Recent transactions
-* Quick actions
-* Financial charts
+- Available balance
+- Account information
+- Money received
+- Money sent
+- Transaction count
+- Monthly financial activity
+- Recent transactions
+- Quick actions
+- Financial charts
+- Shared financial state across dashboard and transaction-related pages
 
 ## Tech Stack
 
 ### Frontend
 
-* React
-* TypeScript
-* Vite
-* Context Api
-* Tailwind CSS
-* React Router
-* Axios
-* Recharts
-* Lucide React
+- React
+- TypeScript
+- Vite
+- Redux Toolkit
+- Context API
+- Tailwind CSS
+- React Router
+- Axios
+- Recharts
+- Lucide React
+- jsPDF
 
 ### Backend
 
-* Node.js
-* Express
-* TypeScript
-* Prisma ORM
-* PostgreSQL
-* JWT
-* bcrypt
-* Zod
+- Node.js
+- Express
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- JWT
+- bcrypt
+- Zod
 
 ### Services
 
-* Neon PostgreSQL
-* EmailJS
+- Neon PostgreSQL
+- EmailJS
 
 ## Architecture
 
@@ -131,7 +154,8 @@ Noreva
 │   ├── React
 │   ├── TypeScript
 │   ├── Tailwind CSS
-│   ├── Context Api
+│   ├── Redux Toolkit
+│   ├── Context API
 │   ├── React Router
 │   └── Axios
 │
@@ -146,7 +170,19 @@ Noreva
 
 The frontend communicates with the Express API through authenticated HTTP requests.
 
-The backend handles authentication, wallet operations, transfers, transactions, scheduled payments, notifications and database access.
+Redux Toolkit manages shared financial data such as:
+
+- Wallet balance
+- Money received
+- Money sent
+- Transaction count
+- Monthly activity
+- Recent transactions
+- Transaction history
+- Scheduled payments
+- Notifications
+
+The backend handles authentication, wallet operations, transfers, transaction processing, scheduled payments, notifications and database access.
 
 ## Security
 
@@ -154,33 +190,38 @@ Security was considered throughout the application rather than relying only on f
 
 ### Authentication
 
-* Passwords are hashed with bcrypt.
-* JWTs are used for authenticated API requests.
-* Protected API routes require a valid Bearer token.
-* Password reset tokens are randomly generated and expire after a limited period.
+- Passwords are hashed with bcrypt.
+- JWTs are used for authenticated API requests.
+- Protected API routes require a valid Bearer token.
+- Password reset tokens are randomly generated and expire after a limited period.
+- Authentication and password-reset endpoints use rate limiting.
+
+### Transaction Security
+
+- Transfers require a transaction PIN.
+- Transaction PINs are stored securely using hashing.
+- PIN verification is performed on the server.
+- Self-transfers are prevented.
+- Server-side balance validation prevents insufficient-balance transfers.
+- Wallet debiting uses an atomic balance condition to help prevent concurrent overdrafts.
 
 ### Authorization
 
 User-owned resources are scoped using the authenticated user's ID.
 
-For example, transaction and notification queries are associated with the authenticated user rather than trusting a user ID supplied by the client.
+Transaction, notification, dashboard and scheduled-payment operations are associated with the authenticated user rather than trusting user IDs supplied by the client.
 
-This prevents users from simply changing an ID in a request to access another user's data.
-
-### Transfer Protection
-
-Money transfers use an atomic balance check when debiting the sender's wallet.
-
-The wallet is only debited when the available balance is sufficient, helping prevent concurrent requests from spending the same balance.
+This prevents users from simply changing an ID or reference to access another user's financial data.
 
 ### API Protection
 
-* Authentication middleware
-* Login rate limiting
-* Password-reset rate limiting
-* Restricted CORS configuration
-* Server-side request validation with Zod
-* Environment variables for secrets
+- Authentication middleware
+- Login rate limiting
+- Transfer rate limiting
+- Password-reset rate limiting
+- Restricted CORS configuration
+- Server-side request validation with Zod
+- Environment variables for secrets
 
 ## Environment Variables
 
@@ -213,37 +254,31 @@ EMAILJS_PRIVATE_KEY=
 
 Make sure you have:
 
-* Node.js
-* Yarn
-* PostgreSQL database
+- Node.js
+- Yarn
+- PostgreSQL database
 
-### Clone the repository
+### Install Frontend Dependencies
 
-```bash
-git clone https://github.com/al-waheed/Noreva-Modern-Digital-Banking.git
-
-cd Noreva-Modern-Digital-Banking
-```
-
-### Install frontend dependencies
+From the `client` directory:
 
 ```bash
-cd client
 yarn install
 ```
 
-### Install backend dependencies
+### Install Backend Dependencies
+
+From the `server` directory:
 
 ```bash
-cd ../server
 yarn install
 ```
 
-### Configure environment variables
+### Configure Environment Variables
 
 Create the required `.env` files in the `client` and `server` directories.
 
-### Set up the database
+### Set Up the Database
 
 From the server directory:
 
@@ -252,13 +287,13 @@ npx prisma migrate dev
 npx prisma generate
 ```
 
-### Start the backend
+### Start the Backend
 
 ```bash
 yarn dev
 ```
 
-### Start the frontend
+### Start the Frontend
 
 From the client directory:
 
@@ -277,6 +312,7 @@ POST /api/auth/register
 POST /api/auth/login
 POST /api/auth/forgot-password
 POST /api/auth/reset-password
+POST /api/auth/transaction-pin
 GET  /api/auth/me
 ```
 
@@ -300,6 +336,8 @@ GET /api/transactions
 GET /api/transactions/:reference
 ```
 
+Search, date filtering, pagination and PDF statement generation are handled on the frontend using the transaction data returned by the API.
+
 ### Scheduled Payments
 
 ```text
@@ -319,38 +357,42 @@ All protected endpoints require authentication.
 
 ## Project Goals
 
-Noreva was built as a demo project to demonstrate practical full-stack development skills through a realistic fintech use case.
+Noreva was built as a demo project to demonstrate practical full stack development skills through a realistic fintech use case.
 
 The project focuses on:
 
-* Full-stack application architecture
-* REST API development
-* Database design
-* Authentication and authorization
-* Secure financial workflows
-* React application architecture
-* TypeScript
-* API integration
-* Transaction handling
-* Error handling
-* Security considerations
-* Responsive UI development
+- Full stack application architecture
+- REST API development
+- Database design
+- Authentication and authorization
+- Transaction PIN security
+- Secure financial workflows
+- React application architecture
+- Redux state management
+- TypeScript
+- API integration
+- Transaction handling
+- Error handling
+- Financial data synchronization
+- PDF statement generation
+- Responsive UI development
+- Security considerations
 
 ## Future Improvements
 
 Possible future improvements include:
 
-* Automated testing
-* CI/CD pipeline
-* Docker deployment
-* Improved application monitoring
-* More advanced analytics
-* Additional card functionality
-* Production-grade background job processing
-* Additional financial services
+- Automated testing
+- CI/CD pipeline
+- Docker deployment
+- Improved application monitoring
+- More advanced financial analytics
+- Additional card functionality
+- Production-grade background job processing
+- Additional financial services
 
 ## Disclaimer
 
-Noreva is a demonstration application created for demo purposes.
+Noreva is a demonstration application created for portfolio and educational purposes.
 
 It does not provide real banking services, process real financial transactions, issue real payment cards, or connect to Nigerian banking infrastructure.

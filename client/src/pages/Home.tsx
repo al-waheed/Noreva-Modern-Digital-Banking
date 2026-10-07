@@ -70,7 +70,7 @@ const Home = () => {
 
               <p className="mt-6 max-w-lg text-lg leading-8 text-slate-600">
                 Manage your money, send payments, track your spending and access
-                your digital card — all from one simple account.
+                your digital card all from one simple account.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
