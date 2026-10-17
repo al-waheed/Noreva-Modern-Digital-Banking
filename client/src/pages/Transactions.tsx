@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { TransactionFilters } from "../components/transactions/TransactionFilters";
-import { TransactionPagination } from "../components/transactions/TransactionPagination";
+import Pagination from "../components/Pagination";
 import { TransactionSummary } from "../components/transactions/TransactionSummary";
 import { TransactionTable } from "../components/transactions/TransactionTable";
 import PageHeader from "../components/PageHeader";
@@ -97,7 +97,7 @@ const Transactions = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <PageHeader
-        onBack={() => navigate("/dashboard")}
+        onBack={() => navigate(-1)}
         rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
@@ -186,7 +186,7 @@ const Transactions = () => {
               />
 
               {totalPages > 1 && (
-                <TransactionPagination
+                <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPrevious={() =>

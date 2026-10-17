@@ -1,21 +1,18 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-interface TransactionPaginationProps {
+interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPrevious: () => void;
   onNext: () => void;
 }
 
-export const TransactionPagination = ({
+const Pagination = ({
   currentPage,
   totalPages,
   onPrevious,
   onNext,
-}: TransactionPaginationProps) => {
+}: PaginationProps) => {
   return (
     <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 sm:px-6">
       <p className="text-sm text-slate-500">
@@ -46,3 +43,5 @@ export const TransactionPagination = ({
     </div>
   );
 };
+
+export default Pagination;

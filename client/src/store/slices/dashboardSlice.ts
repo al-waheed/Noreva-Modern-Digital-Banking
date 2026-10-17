@@ -1,4 +1,8 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+} from "@reduxjs/toolkit";
+import api from "../../lib/api";
 
 interface Transaction {
   id: string;
@@ -39,6 +43,28 @@ interface DashboardState {
   data: DashboardData | null;
 }
 
+export const fetchDashboardData = createAsyncThunk(
+  "dashboard/fetchDashboardData",
+  async (token: string): Promise<DashboardData> => {
+    const response = await api.get("/dashboard", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const dashboard = response.data;
+
+    return {
+      balance: Number(dashboard.account.balance),
+      moneyReceived: Number(dashboard.stats.moneyReceived),
+      moneySent: Number(dashboard.stats.moneySent),
+      transactionCount: Number(dashboard.stats.transactionCount),
+      monthlyActivity: dashboard.monthlyActivity,
+      recentTransactions: dashboard.transactions,
+    };
+  },
+);
+
 const initialState: DashboardState = {
   data: null,
 };
@@ -49,93 +75,17 @@ const dashboardSlice = createSlice({
   initialState,
 
   reducers: {
-    setDashboardData: (state, action: PayloadAction<DashboardData>) => {
-      state.data = action.payload;
-    },
-
-    updateBalance: (state, action: PayloadAction<number>) => {
-      if (state.data) {
-        state.data.balance = action.payload;
-      }
-    },
-
-    updateFinancialData: (
-      state,
-      action: PayloadAction<Partial<DashboardData>>,
-    ) => {
-      if (state.data) {
-        state.data = {
-          ...state.data,
-          ...action.payload,
-        };
-      }
-    },
-
-    applyOutgoingTransfer: (
-      state,
-      action: PayloadAction<{
-        balance: number;
-        amount: number;
-        transaction: Transaction;
-        recipient: {
-          firstName: string;
-          lastName: string;
-        };
-      }>,
-    ) => {
-      if (!state.data) {
-        return;
-      }
-
-      const { balance, amount, transaction, recipient } = action.payload;
-
-      // Update balance
-      state.data.balance = balance;
-
-      // Update monthly sent amount
-      state.data.moneySent += amount;
-
-      // Update transaction count
-      state.data.transactionCount += 1;
-
-      // Add the new transaction to recent transactions
-      state.data.recentTransactions = [
-        {
-          ...transaction,
-          receiver: {
-            firstName: recipient.firstName,
-            lastName: recipient.lastName,
-          },
-        },
-        ...state.data.recentTransactions,
-      ].slice(0, 10);
-
-      // Update the current month's chart amount
-      const currentMonth = new Date().toLocaleString("en-US", {
-        month: "short",
-      });
-
-      const currentMonthActivity = state.data.monthlyActivity.find(
-        (item) => item.month === currentMonth,
-      );
-
-      if (currentMonthActivity) {
-        currentMonthActivity.amount += amount;
-      }
-    },
-
     clearDashboardData: (state) => {
       state.data = null;
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase(fetchDashboardData.fulfilled, (state, action) => {
+      state.data = action.payload;
+    });
+  },
 });
 
-export const {
-  setDashboardData,
-  updateBalance,
-  updateFinancialData,
-  applyOutgoingTransfer,
-  clearDashboardData,
-} = dashboardSlice.actions;
+export const { clearDashboardData } = dashboardSlice.actions;
 
 export default dashboardSlice.reducer;

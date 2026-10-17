@@ -134,7 +134,7 @@ export const register = async (req: Request, res: Response) => {
         email: resultTransaction.user.email,
       },
       process.env.JWT_SECRET as string,
-      { expiresIn: "7d" },
+      { expiresIn: "2d" },
     );
 
     return res.status(201).json({
@@ -188,11 +188,7 @@ export const login = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        account: {
-          include: {
-            wallet: true,
-          },
-        },
+        account: true,
         cards: true,
       },
     });
@@ -220,7 +216,7 @@ export const login = async (req: Request, res: Response) => {
       },
       process.env.JWT_SECRET as string,
       {
-        expiresIn: "7d",
+        expiresIn: "2d",
       },
     );
 
@@ -234,7 +230,6 @@ export const login = async (req: Request, res: Response) => {
         lastName: user.lastName,
         email: user.email,
         accountNumber: user.account?.accountNumber,
-        balance: user.account?.wallet?.balance,
       },
     });
   } catch (error) {

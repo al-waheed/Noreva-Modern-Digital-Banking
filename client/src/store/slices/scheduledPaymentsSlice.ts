@@ -4,13 +4,16 @@ export interface ScheduledPayment {
   id: string;
   amount: string | number;
   description?: string | null;
+  createdAt: string;
   scheduledFor: string;
-  frequency: "ONCE" | "DAILY" | "WEEKLY" | "MONTHLY";
   status: string;
   receiver?: {
     firstName: string;
     lastName: string;
     email: string;
+    account?: {
+      accountNumber: string;
+    };
   };
 }
 
@@ -39,14 +42,19 @@ const scheduledPaymentsSlice = createSlice({
     },
 
     addScheduledPayment: (state, action: PayloadAction<ScheduledPayment>) => {
-      state.payments.push(action.payload);
+      state.payments.unshift(action.payload);
     },
 
-    cancelScheduledPayment: (state, action: PayloadAction<string>) => {
-      const payment = state.payments.find((item) => item.id === action.payload);
+    updateScheduledPayment: (
+      state,
+      action: PayloadAction<ScheduledPayment>,
+    ) => {
+      const payment = state.payments.find(
+        (item) => item.id === action.payload.id,
+      );
 
       if (payment) {
-        payment.status = "FAILED";
+        Object.assign(payment, action.payload);
       }
     },
 
@@ -64,7 +72,7 @@ const scheduledPaymentsSlice = createSlice({
 export const {
   setScheduledPayments,
   addScheduledPayment,
-  cancelScheduledPayment,
+  updateScheduledPayment,
   setScheduledPaymentsLoading,
   clearScheduledPayments,
 } = scheduledPaymentsSlice.actions;

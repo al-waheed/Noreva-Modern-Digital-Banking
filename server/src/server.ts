@@ -12,15 +12,6 @@ import { processScheduledPayments } from "./services/scheduledPayment.service";
 
 const app = express();
 
-// const allowedOrigin = process.env.FRONTEND_URL;
-
-// app.use(
-//   cors({
-//     origin: allowedOrigin,
-//     credentials: true,
-//   }),
-// );
-
 const allowedOrigins = [
   "http://localhost:5173",
   process.env.FRONTEND_URL,

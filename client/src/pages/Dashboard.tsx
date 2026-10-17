@@ -45,7 +45,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const firstName = user?.firstName;
-  const balance = Number(dashboard?.balance || user?.balance || 0);
+  const balance = dashboard?.balance ?? 0;
   const accountNumber = user?.accountNumber;
 
   return (
@@ -418,8 +418,8 @@ const Dashboard = () => {
                             <p
                               className={`text-sm font-semibold ${
                                 isReceived
-                                  ? "text-emerald-600"
-                                  : "text-slate-900"
+                                  ? "text-green-700"
+                                  : "text-red-700"
                               }`}
                             >
                               {isReceived ? "+" : "-"}₦

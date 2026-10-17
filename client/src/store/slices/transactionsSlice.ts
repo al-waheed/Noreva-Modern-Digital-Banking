@@ -13,10 +13,18 @@ export interface Transaction {
   sender?: {
     firstName: string;
     lastName: string;
+    email?: string;
+    account?: {
+      accountNumber: string;
+    };
   };
   receiver?: {
     firstName: string;
     lastName: string;
+    email?: string;
+    account?: {
+      accountNumber: string;
+    };
   };
 }
 
@@ -41,10 +49,6 @@ const transactionsSlice = createSlice({
       state.isLoading = false;
     },
 
-    addTransaction: (state, action: PayloadAction<Transaction>) => {
-      state.transactions = [action.payload, ...state.transactions];
-    },
-
     setTransactionsLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
@@ -58,7 +62,6 @@ const transactionsSlice = createSlice({
 
 export const {
   setTransactions,
-  addTransaction,
   setTransactionsLoading,
   clearTransactions,
 } = transactionsSlice.actions;

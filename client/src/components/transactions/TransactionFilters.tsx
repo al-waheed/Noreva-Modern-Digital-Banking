@@ -1,10 +1,6 @@
-import {
-  CalendarDays,
-  Download,
-  Search,
-  X,
-} from "lucide-react";
+import { CalendarDays, Download, X } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import SearchField from "../SearchField";
 
 interface TransactionFiltersProps {
   search: string;
@@ -36,34 +32,12 @@ export const TransactionFilters = ({
   return (
     <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-        <div className="min-w-0 flex-1">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Search transactions
-          </label>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search name, email, account, reference..."
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
-
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Clear search"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
-        </div>
+        <SearchField
+          label="Search transactions"
+          value={search}
+          onChange={setSearch}
+          placeholder="Search name or account number..."
+        />
 
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">

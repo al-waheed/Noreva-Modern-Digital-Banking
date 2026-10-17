@@ -62,8 +62,8 @@ const Cards = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <PageHeader
-        onBack={() => navigate("/dashboard")}
-        backLabel="Back to dashboard"
+        onBack={() => navigate(-1)}
+        backLabel="Back"
         rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img

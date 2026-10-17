@@ -6,7 +6,7 @@ import {
   setNotifications,
   markNotificationAsRead,
 } from "../store/slices/notificationSlice";
-import { setDashboardData } from "../store/slices/dashboardSlice";
+import { fetchDashboardData } from "../store/slices/dashboardSlice";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -21,7 +21,9 @@ const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const previousNotificationIds = useRef<string[]>([]);
+  const previousNotificationIds = useRef(
+    notifications.map((notification) => notification.id),
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -38,10 +40,13 @@ const NotificationBell = () => {
 
         const previousIds = previousNotificationIds.current;
 
-        const hasNewNotification =
+        const hasNewReceivedMoneyNotification =
           previousIds.length > 0 &&
           newNotifications.some(
-            (notification: { id: string }) =>
+            (notification: { id: string; title: string }) =>
+              ["Money received", "Scheduled payment sent"].includes(
+                notification.title,
+              ) &&
               !previousIds.includes(notification.id),
           );
 
@@ -58,25 +63,8 @@ const NotificationBell = () => {
 
         // A new notification can mean the user received money.
         // Refresh the existing dashboard data and update Redux.
-        if (hasNewNotification) {
-          const dashboardResponse = await api.get("/dashboard", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          const dashboard = dashboardResponse.data;
-
-          dispatch(
-            setDashboardData({
-              balance: Number(dashboard.account.balance),
-              moneyReceived: Number(dashboard.stats.moneyReceived),
-              moneySent: Number(dashboard.stats.moneySent),
-              transactionCount: Number(dashboard.stats.transactionCount),
-              monthlyActivity: dashboard.monthlyActivity,
-              recentTransactions: dashboard.transactions,
-            }),
-          );
+        if (hasNewReceivedMoneyNotification) {
+          await dispatch(fetchDashboardData(token)).unwrap();
         }
       } catch (error) {
         console.error("Unable to load notifications:", error);

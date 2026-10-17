@@ -1,25 +1,5 @@
 import prisma from "../config/prisma";
-
-const getNextScheduledDate = (
-  date: Date,
-  frequency: "DAILY" | "WEEKLY" | "MONTHLY",
-) => {
-  const nextDate = new Date(date);
-
-  if (frequency === "DAILY") {
-    nextDate.setDate(nextDate.getDate() + 1);
-  }
-
-  if (frequency === "WEEKLY") {
-    nextDate.setDate(nextDate.getDate() + 7);
-  }
-
-  if (frequency === "MONTHLY") {
-    nextDate.setMonth(nextDate.getMonth() + 1);
-  }
-
-  return nextDate;
-};
+import { createNotification } from "./notification.service";
 
 const generateReference = () => {
   return `NRV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -34,147 +14,167 @@ export const processScheduledPayments = async () => {
           lte: new Date(),
         },
       },
-      include: {
-        user: {
-          include: {
-            account: {
-              include: {
-                wallet: true,
-              },
-            },
-          },
-        },
-        receiver: {
-          include: {
-            account: {
-              include: {
-                wallet: true,
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
       },
     });
 
-    for (const payment of payments) {
-      const senderWallet = payment.user.account?.wallet;
-      const receiverWallet = payment.receiver?.account?.wallet;
-
-      if (!senderWallet || !receiverWallet || !payment.receiver) {
-        console.error(
-          `Scheduled payment ${payment.id} has invalid account information.`,
-        );
-
-        continue;
-      }
-
-      // Make sure the sender has enough money.
-      const senderUpdate = await prisma.wallet.updateMany({
-        where: {
-          id: senderWallet.id,
-          balance: {
-            gte: payment.amount,
-          },
-        },
-        data: {
-          balance: {
-            decrement: payment.amount,
-          },
-        },
-      });
-
-      if (senderUpdate.count === 0) {
-        await prisma.scheduledPayment.update({
-          where: {
-            id: payment.id,
-          },
-          data: {
-            status: "FAILED",
-          },
-        });
-
-        console.log(
-          `Scheduled payment ${payment.id} failed: insufficient balance.`,
-        );
-
-        continue;
-      }
-
+    for (const { id } of payments) {
       try {
-        await prisma.wallet.update({
-          where: {
-            id: receiverWallet.id,
-          },
-          data: {
-            balance: {
-              increment: payment.amount,
-            },
-          },
-        });
-
-        await prisma.transaction.createMany({
-          data: [
-            {
-              reference: generateReference(),
-              amount: payment.amount,
-              type: "TRANSFER",
-              status: "SUCCESS",
-              description: payment.description || "Scheduled payment",
-              senderId: payment.userId,
-              receiverId: payment.receiverId,
-              walletId: senderWallet.id,
-            },
-            {
-              reference: generateReference(),
-              amount: payment.amount,
-              type: "TRANSFER",
-              status: "SUCCESS",
-              description: payment.description || "Scheduled payment",
-              senderId: payment.userId,
-              receiverId: payment.receiverId,
-              walletId: receiverWallet.id,
-            },
-          ],
-        });
-
-        if (payment.frequency === "ONCE") {
-          await prisma.scheduledPayment.update({
+        const result = await prisma.$transaction(async (tx) => {
+          const claim = await tx.scheduledPayment.updateMany({
             where: {
-              id: payment.id,
+              id,
+              status: "PENDING",
+              scheduledFor: {
+                lte: new Date(),
+              },
             },
             data: {
               status: "SUCCESS",
             },
           });
-        } else {
-          await prisma.scheduledPayment.update({
-            where: {
-              id: payment.id,
-            },
-            data: {
-              scheduledFor: getNextScheduledDate(
-                payment.scheduledFor,
-                payment.frequency,
-              ),
+
+          if (claim.count === 0) {
+            return null;
+          }
+
+          const payment = await tx.scheduledPayment.findUnique({
+            where: { id },
+            include: {
+              user: {
+                include: {
+                  account: {
+                    include: {
+                      wallet: true,
+                    },
+                  },
+                },
+              },
+              receiver: {
+                include: {
+                  account: {
+                    include: {
+                      wallet: true,
+                    },
+                  },
+                },
+              },
             },
           });
+
+          if (!payment) {
+            throw new Error(`Scheduled payment ${id} disappeared after claim.`);
+          }
+
+          const senderWallet = payment.user.account?.wallet;
+          const receiverWallet = payment.receiver?.account?.wallet;
+
+          if (!senderWallet || !receiverWallet || !payment.receiver) {
+            await tx.scheduledPayment.update({
+              where: { id },
+              data: { status: "FAILED" },
+            });
+
+            return { status: "FAILED" as const, payment };
+          }
+
+          const senderUpdate = await tx.wallet.updateMany({
+            where: {
+              id: senderWallet.id,
+              balance: {
+                gte: payment.amount,
+              },
+            },
+            data: {
+              balance: {
+                decrement: payment.amount,
+              },
+            },
+          });
+
+          if (senderUpdate.count === 0) {
+            await tx.scheduledPayment.update({
+              where: { id },
+              data: { status: "FAILED" },
+            });
+
+            return { status: "FAILED" as const, payment };
+          }
+
+          await tx.wallet.update({
+            where: { id: receiverWallet.id },
+            data: {
+              balance: {
+                increment: payment.amount,
+              },
+            },
+          });
+
+          await tx.transaction.createMany({
+            data: [
+              {
+                reference: generateReference(),
+                amount: payment.amount,
+                type: "TRANSFER",
+                status: "SUCCESS",
+                description: payment.description || "Scheduled payment",
+                senderId: payment.userId,
+                receiverId: payment.receiverId,
+                walletId: senderWallet.id,
+              },
+              {
+                reference: generateReference(),
+                amount: payment.amount,
+                type: "TRANSFER",
+                status: "SUCCESS",
+                description: payment.description || "Scheduled payment",
+                senderId: payment.userId,
+                receiverId: payment.receiverId,
+                walletId: receiverWallet.id,
+              },
+            ],
+          });
+
+          return { status: "SUCCESS" as const, payment };
+        });
+
+        if (!result) {
+          continue;
         }
 
-        console.log(`Scheduled payment ${payment.id} processed successfully.`);
-      } catch (error) {
-        // Return the money if something failed after deducting it.
-        await prisma.wallet.update({
-          where: {
-            id: senderWallet.id,
-          },
-          data: {
-            balance: {
-              increment: payment.amount,
-            },
-          },
-        });
+        if (result.status === "FAILED") {
+          console.log(
+            `Scheduled payment ${id} failed: insufficient funds or invalid account.`,
+          );
+          continue;
+        }
 
-        console.error(`Scheduled payment ${payment.id} failed:`, error);
+        const { payment } = result;
+
+        try {
+          await Promise.all([
+            createNotification({
+              userId: payment.userId,
+              title: "Scheduled payment sent",
+              message: `₦${Number(payment.amount).toLocaleString("en-NG")} sent to ${payment.receiver!.firstName} ${payment.receiver!.lastName} via scheduled payment.`,
+            }),
+            createNotification({
+              userId: payment.receiverId!,
+              title: "Money received",
+              message: `₦${Number(payment.amount).toLocaleString("en-NG")} received from ${payment.user.firstName} ${payment.user.lastName} via scheduled payment.`,
+            }),
+          ]);
+        } catch (notificationError) {
+          console.error(
+            `Unable to send notifications for scheduled payment ${id}:`,
+            notificationError,
+          );
+        }
+
+        console.log(`Scheduled payment ${id} processed successfully.`);
+      } catch (error) {
+        console.error(`Scheduled payment ${id} failed:`, error);
       }
     }
   } catch (error) {

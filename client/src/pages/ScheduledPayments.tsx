@@ -1,10 +1,18 @@
-import { CalendarClock, ChevronDown, Plus, X } from "lucide-react";
-import { useEffect, useState, type SubmitEvent } from "react";
+import { CalendarClock, Plus, X } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SubmitEvent,
+} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import PageHeader from "../components/PageHeader";
+import Pagination from "../components/Pagination";
+import SearchField from "../components/SearchField";
 import TransactionPinModal from "../components/TransactionPinModal";
 import CreateTransactionPinModal from "../components/CreateTransactionPinModal";
 import { formatCurrency } from "../utils/formatters";
@@ -12,9 +20,12 @@ import type { AppDispatch, RootState } from "../store/store";
 import {
   setScheduledPayments,
   addScheduledPayment,
-  cancelScheduledPayment,
+  updateScheduledPayment,
   setScheduledPaymentsLoading,
 } from "../store/slices/scheduledPaymentsSlice";
+import { fetchDashboardData } from "../store/slices/dashboardSlice";
+
+const PAYMENTS_PER_PAGE = 10;
 
 interface Recipient {
   firstName: string;
@@ -31,6 +42,9 @@ const ScheduledPayments = () => {
   const { payments, isLoading } = useSelector(
     (state: RootState) => state.scheduledPayments,
   );
+  const previousPayments = useRef(payments);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -41,21 +55,57 @@ const ScheduledPayments = () => {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
-  const [frequency, setFrequency] = useState("ONCE");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [pinError, setPinError] = useState("");
   const [createPinError, setCreatePinError] = useState("");
 
+  const filteredPayments = useMemo(() => {
+    const newestPayments = [...payments].sort(
+      (first, second) =>
+        new Date(second.createdAt).getTime() -
+        new Date(first.createdAt).getTime(),
+    );
+    const searchTerm = search.trim().toLowerCase();
+
+    if (!searchTerm) return newestPayments;
+
+    return newestPayments.filter((payment) => {
+      const recipientName = payment.receiver
+        ? `${payment.receiver.firstName} ${payment.receiver.lastName}`
+        : "";
+      const accountNumber = payment.receiver?.account?.accountNumber || "";
+
+      return `${recipientName} ${accountNumber}`
+        .toLowerCase()
+        .includes(searchTerm);
+    });
+  }, [payments, search]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredPayments.length / PAYMENTS_PER_PAGE),
+  );
+  const page = Math.min(currentPage, totalPages);
+  const paginatedPayments = useMemo(() => {
+    const startIndex = (page - 1) * PAYMENTS_PER_PAGE;
+
+    return filteredPayments.slice(startIndex, startIndex + PAYMENTS_PER_PAGE);
+  }, [filteredPayments, page]);
+
   useEffect(() => {
-    const loadPayments = async () => {
+    let isActive = true;
+
+    const loadPayments = async (showLoading = false) => {
       if (!token) {
         dispatch(setScheduledPaymentsLoading(false));
         return;
       }
 
-      dispatch(setScheduledPaymentsLoading(true));
+      if (showLoading) {
+        dispatch(setScheduledPaymentsLoading(true));
+      }
 
       try {
         const response = await api.get("/scheduled-payments", {
@@ -64,17 +114,58 @@ const ScheduledPayments = () => {
           },
         });
 
-        dispatch(setScheduledPayments(response.data.payments));
-      } catch (error: any) {
-        setError(
-          error.response?.data?.message || "Unable to load scheduled payments.",
-        );
+        if (!isActive) return;
 
-        dispatch(setScheduledPaymentsLoading(false));
+        const updatedPayments = response.data.payments;
+        const previousPaymentsById = new Map(
+          previousPayments.current.map((payment) => [payment.id, payment]),
+        );
+        const hasProcessedPayment = updatedPayments.some((payment: (typeof payments)[number]) => {
+          const previousPayment = previousPaymentsById.get(payment.id);
+
+          return (
+            (previousPayment !== undefined &&
+              previousPayment.status !== payment.status &&
+              payment.status === "SUCCESS") ||
+            (previousPayment !== undefined &&
+              previousPayment.scheduledFor !== payment.scheduledFor)
+          );
+        });
+
+        previousPayments.current = updatedPayments;
+        dispatch(setScheduledPayments(updatedPayments));
+
+        if (hasProcessedPayment) {
+          void dispatch(fetchDashboardData(token))
+            .unwrap()
+            .catch((refreshError) => {
+              console.error(
+                "Dashboard refresh failed after scheduled payment:",
+                refreshError,
+              );
+            });
+        }
+      } catch (error: any) {
+        if (isActive && showLoading) {
+          setError(
+            error.response?.data?.message ||
+              "Unable to load scheduled payments.",
+          );
+        }
+
+        if (isActive) {
+          dispatch(setScheduledPaymentsLoading(false));
+        }
       }
     };
 
-    loadPayments();
+    loadPayments(true);
+    const interval = setInterval(() => loadPayments(), 30_000);
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
   }, [token, dispatch]);
 
   const resetForm = () => {
@@ -83,7 +174,6 @@ const ScheduledPayments = () => {
     setAmount("");
     setDescription("");
     setScheduledFor("");
-    setFrequency("ONCE");
     setError("");
     setPinError("");
     setCreatePinError("");
@@ -161,7 +251,7 @@ const ScheduledPayments = () => {
           amount: Number(amount),
           description: description.trim() || undefined,
           scheduledFor,
-          frequency,
+          frequency: "ONCE",
           transactionPin,
         },
         {
@@ -172,6 +262,10 @@ const ScheduledPayments = () => {
       );
 
       dispatch(addScheduledPayment(response.data.payment));
+      previousPayments.current = [
+        response.data.payment,
+        ...previousPayments.current,
+      ];
 
       setShowPinModal(false);
       setShowCreatePinModal(false);
@@ -210,7 +304,7 @@ const ScheduledPayments = () => {
 
   const cancelPayment = async (id: string) => {
     try {
-      await api.patch(
+      const response = await api.patch(
         `/scheduled-payments/${id}/cancel`,
         {},
         {
@@ -220,20 +314,22 @@ const ScheduledPayments = () => {
         },
       );
 
-      dispatch(cancelScheduledPayment(id));
+      dispatch(updateScheduledPayment(response.data.payment));
+      previousPayments.current = previousPayments.current.map((payment) =>
+        payment.id === response.data.payment.id
+          ? response.data.payment
+          : payment,
+      );
     } catch (error: any) {
       setError(error.response?.data?.message || "Unable to cancel payment.");
     }
   };
 
-  const formatFrequency = (value: string) =>
-    value.charAt(0) + value.slice(1).toLowerCase();
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <PageHeader
-        onBack={() => navigate("/dashboard")}
-        backLabel="Back to dashboard"
+        onBack={() => navigate(-1)}
+        backLabel="Back"
         rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
@@ -279,6 +375,20 @@ const ScheduledPayments = () => {
             </div>
           )}
 
+          {payments.length > 0 && (
+            <div className="mt-6">
+              <SearchField
+                label="Search scheduled payments"
+                value={search}
+                onChange={(value) => {
+                  setSearch(value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search recipient name or account number..."
+              />
+            </div>
+          )}
+
           <section className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {isLoading ? (
               <div className="p-8 text-center text-sm text-slate-500">
@@ -310,9 +420,14 @@ const ScheduledPayments = () => {
                   Schedule your first payment
                 </button>
               </div>
+            ) : filteredPayments.length === 0 ? (
+              <div className="px-6 py-12 text-center text-sm text-slate-500">
+                No scheduled payments match your search.
+              </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {payments.map((payment) => {
+              <>
+                <div className="divide-y divide-slate-100">
+                  {paginatedPayments.map((payment) => {
                   const isPending = payment.status === "PENDING";
                   const isSuccessful = payment.status === "SUCCESS";
                   const isCancelled = payment.status === "FAILED";
@@ -349,9 +464,6 @@ const ScheduledPayments = () => {
                               )}
                             </span>
 
-                            <span>•</span>
-
-                            <span>{formatFrequency(payment.frequency)}</span>
                           </div>
                         </div>
                       </div>
@@ -393,8 +505,24 @@ const ScheduledPayments = () => {
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                  })}
+                </div>
+
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPrevious={() =>
+                      setCurrentPage((value) => Math.max(value - 1, 1))
+                    }
+                    onNext={() =>
+                      setCurrentPage((value) =>
+                        Math.min(value + 1, totalPages),
+                      )
+                    }
+                  />
+                )}
+              </>
             )}
           </section>
         </main>
@@ -488,27 +616,6 @@ const ScheduledPayments = () => {
                       onChange={(event) => setScheduledFor(event.target.value)}
                       className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                     />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">
-                      Frequency
-                    </label>
-
-                    <div className="relative mt-2">
-                      <select
-                        value={frequency}
-                        onChange={(event) => setFrequency(event.target.value)}
-                        className="w-full cursor-pointer appearance-none rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                      >
-                        <option value="ONCE">Once</option>
-                        <option value="DAILY">Daily</option>
-                        <option value="WEEKLY">Weekly</option>
-                        <option value="MONTHLY">Monthly</option>
-                      </select>
-
-                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    </div>
                   </div>
 
                   <div>

@@ -85,7 +85,13 @@ export const TransactionTable = ({
               </div>
 
               <div>
-                <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
+                    isSuccessful
+                      ? "bg-green-50 text-green-700"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
                   {transaction.status.toLowerCase()}
                 </span>
               </div>
@@ -93,7 +99,7 @@ export const TransactionTable = ({
               <div className="text-left md:text-right">
                 <p
                   className={`text-sm font-semibold ${
-                    received ? "text-slate-900" : "text-slate-700"
+                    received ? "text-green-700" : "text-red-700"
                   }`}
                 >
                   {received ? "+" : "-"}

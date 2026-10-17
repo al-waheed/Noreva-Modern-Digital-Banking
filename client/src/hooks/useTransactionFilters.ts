@@ -54,15 +54,7 @@ export const useTransactionFilters = ({
         ? `${otherPerson.firstName} ${otherPerson.lastName}`
         : "";
 
-      const searchableText = [
-        personName,
-        otherPerson?.email || "",
-        otherPerson?.account?.accountNumber || "",
-        transaction.reference,
-        transaction.description || "",
-        transaction.type,
-        transaction.status,
-      ]
+      const searchableText = [personName, otherPerson?.account?.accountNumber || ""]
         .join(" ")
         .toLowerCase();
 

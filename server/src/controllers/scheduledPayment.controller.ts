@@ -8,7 +8,6 @@ const createScheduledPaymentSchema = z.object({
   amount: z.number().positive(),
   description: z.string().max(100).optional(),
   scheduledFor: z.string(),
-  frequency: z.enum(["ONCE", "DAILY", "WEEKLY", "MONTHLY"]),
   transactionPin: z
     .string()
     .regex(/^\d{4}$/, "Transaction PIN must be 4 digits"),
@@ -89,7 +88,6 @@ export const createScheduledPayment = async (
       amount,
       description,
       scheduledFor,
-      frequency,
       transactionPin,
     } = result.data;
 
@@ -178,7 +176,7 @@ export const createScheduledPayment = async (
         amount,
         description: description?.trim() || null,
         scheduledFor: date,
-        frequency,
+        frequency: "ONCE",
         userId: req.userId,
         receiverId: receiverAccount.userId,
         status: "PENDING",

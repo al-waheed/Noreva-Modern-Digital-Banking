@@ -10,7 +10,7 @@ interface PageHeaderProps {
 
 const PageHeader = ({
   onBack,
-  backLabel = "Back to dashboard",
+  backLabel = "Back",
   rightContent,
   children,
 }: PageHeaderProps) => {

@@ -11,8 +11,8 @@ import api from "../lib/api";
 import type { AppDispatch } from "../store/store";
 
 import {
-  setDashboardData,
   clearDashboardData,
+  fetchDashboardData,
 } from "../store/slices/dashboardSlice";
 
 import { clearTransactions } from "../store/slices/transactionsSlice";
@@ -27,7 +27,6 @@ interface User {
   lastName: string;
   email: string;
   accountNumber?: string;
-  balance?: number;
   hasTransactionPin?: boolean;
   cards?: {
     id: string;
@@ -68,9 +67,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const [user, setUser] = useState<User | null>(null);
 
-  const [token, setToken] = useState<string | null>(
-    localStorage.getItem("token"),
-  );
+  const [token, setToken] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -88,31 +85,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(response.data.user);
   }, [token]);
 
-  const loadDashboardData = useCallback(async () => {
-    if (!token) {
-      return;
-    }
-
-    const response = await api.get("/dashboard", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const dashboard = response.data;
-
-    dispatch(
-      setDashboardData({
-        balance: Number(dashboard.account.balance),
-        moneyReceived: Number(dashboard.stats.moneyReceived),
-        moneySent: Number(dashboard.stats.moneySent),
-        transactionCount: Number(dashboard.stats.transactionCount),
-        monthlyActivity: dashboard.monthlyActivity,
-        recentTransactions: dashboard.transactions,
-      }),
-    );
-  }, [token, dispatch]);
-
   useEffect(() => {
     const initializeApp = async () => {
       if (!token) {
@@ -127,11 +99,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       try {
         await refreshUser();
-        await loadDashboardData();
+        await dispatch(fetchDashboardData(token)).unwrap();
       } catch (error) {
         console.log(error);
-
-        localStorage.removeItem("token");
 
         setToken(null);
         setUser(null);
@@ -146,7 +116,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     initializeApp();
-  }, [token, refreshUser, loadDashboardData, dispatch]);
+  }, [token, refreshUser, dispatch]);
 
   const login = async (email: string, password: string) => {
     const response = await api.post("/auth/login", {
@@ -156,8 +126,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const newToken = response.data.token;
 
-    localStorage.setItem("token", newToken);
-
+    setIsLoading(true);
     setToken(newToken);
     setUser(response.data.user);
   };
@@ -179,8 +148,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const newToken = response.data.token;
 
-    localStorage.setItem("token", newToken);
-
+    setIsLoading(true);
     setToken(newToken);
     setUser(response.data.user);
   };
@@ -213,8 +181,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-
     setToken(null);
     setUser(null);
 

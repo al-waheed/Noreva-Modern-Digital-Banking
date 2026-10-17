@@ -7,70 +7,74 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import jsPDF from "jspdf";
 import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/PageHeader";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import api from "../lib/api";
-
-interface Transaction {
-  reference: string;
-  amount: string | number;
-  type: string;
-  status: string;
-  description?: string;
-  createdAt: string;
-
-  sender?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    account?: {
-      accountNumber: string;
-    };
-  };
-
-  receiver?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    account?: {
-      accountNumber: string;
-    };
-  };
-}
+import type { RootState } from "../store/store";
+import type { Transaction } from "../store/slices/transactionsSlice";
 
 const TransactionReceipt = () => {
   const navigate = useNavigate();
   const { reference } = useParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const cachedTransaction = useSelector((state: RootState) =>
+    state.transactions.transactions.find(
+      (item) => item.reference === reference,
+    ),
+  );
 
-  const [transaction, setTransaction] = useState<Transaction | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [fetchedReceipt, setFetchedReceipt] = useState<{
+    reference: string;
+    transaction: Transaction;
+  } | null>(null);
+  const [failedReference, setFailedReference] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const fetchedTransaction =
+    fetchedReceipt && fetchedReceipt.reference === reference
+      ? fetchedReceipt.transaction
+      : null;
+  const transaction = cachedTransaction ?? fetchedTransaction;
+  const isReceived = transaction?.receiverId === user?.id;
+  const isLoading = Boolean(
+    token && reference && !transaction && failedReference !== reference,
+  );
+
   useEffect(() => {
-    const fetchTransaction = async () => {
-      try {
-        const response = await api.get(`/transactions/${reference}`, {
+    let isActive = true;
+
+    if (token && reference && !cachedTransaction) {
+      api
+        .get(`/transactions/${reference}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+        })
+        .then((response) => {
+          if (isActive) {
+            setFetchedReceipt({
+              reference,
+              transaction: response.data.transaction,
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load receipt:", error);
+
+          if (isActive) {
+            setFailedReference(reference);
+          }
         });
-
-        setTransaction(response.data.transaction);
-      } catch (error) {
-        console.error("Failed to load transaction:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (token && reference) {
-      fetchTransaction();
     }
-  }, [token, reference]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [cachedTransaction, token, reference]);
 
   const copyReference = async () => {
     if (!transaction) return;
@@ -207,10 +211,13 @@ const TransactionReceipt = () => {
     ctx.beginPath();
     ctx.arc(width / 2, 190, 32, 0, Math.PI * 2);
 
-    ctx.fillStyle = "#0f172a";
+    ctx.fillStyle = "#f0fdf4";
     ctx.fill();
+    ctx.strokeStyle = "#166534";
+    ctx.lineWidth = 4;
+    ctx.stroke();
 
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#166534";
     ctx.font = "bold 28px Arial";
     ctx.textAlign = "center";
     ctx.fillText("✓", width / 2, 200);
@@ -221,7 +228,11 @@ const TransactionReceipt = () => {
 
     ctx.fillStyle = "#15803d";
     ctx.font = "bold 22px Arial";
-    ctx.fillText("TRANSFER SUCCESSFUL", width / 2, 255);
+    ctx.fillText(
+      isReceived ? "RECEIVED SUCCESSFULLY" : "TRANSFER SUCCESSFUL",
+      width / 2,
+      255,
+    );
 
     // --------------------------------------------------
     // AMOUNT
@@ -229,7 +240,7 @@ const TransactionReceipt = () => {
 
     ctx.fillStyle = "#64748b";
     ctx.font = "20px Arial";
-    ctx.fillText("Amount sent", width / 2, 315);
+    ctx.fillText(isReceived ? "Amount received" : "Amount sent", width / 2, 315);
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 42px Arial";
@@ -486,10 +497,10 @@ const TransactionReceipt = () => {
           <p className="font-semibold text-slate-800">Transaction not found</p>
 
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(-1)}
             className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
           >
-            Back to dashboard
+            Back
           </button>
         </div>
       </div>
@@ -501,8 +512,8 @@ const TransactionReceipt = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <PageHeader
-        onBack={() => navigate("/dashboard")}
-        backLabel="Dashboard"
+        onBack={() => navigate(-1)}
+        backLabel="Back"
         rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
@@ -518,22 +529,28 @@ const TransactionReceipt = () => {
 
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <div className="mb-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2 border-green-800 bg-green-50 text-green-800">
             <CheckCircle2 size={27} />
           </div>
 
-          <h1 className="mt-4 text-2xl font-semibold">Transfer successful</h1>
+          <h1 className="mt-4 text-2xl font-semibold">
+            {isReceived ? "Received successfully" : "Transfer successful"}
+          </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Your money has been sent successfully.
-          </p>
+          {!isReceived && (
+            <p className="mt-1 text-sm text-slate-500">
+              Your money has been sent successfully.
+            </p>
+          )}
         </div>
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           {/* AMOUNT */}
 
           <div className="border-b border-slate-200 px-6 py-7 text-center">
-            <p className="text-sm text-slate-500">Amount sent</p>
+            <p className="text-sm text-slate-500">
+              {isReceived ? "Amount received" : "Amount sent"}
+            </p>
 
             <p className="mt-2 text-3xl font-semibold tracking-tight">
               {formatCurrency(transaction.amount)}
@@ -660,7 +677,7 @@ const TransactionReceipt = () => {
         {/* DONE */}
 
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(-1)}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           <ReceiptText size={17} />
