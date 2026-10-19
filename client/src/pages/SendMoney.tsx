@@ -4,7 +4,8 @@ import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store/store";
-import { fetchDashboardData } from "../store/slices/dashboardSlice";
+import { applyOutgoingTransfer } from "../store/slices/dashboardSlice";
+import { addTransaction } from "../store/slices/transactionsSlice";
 import { useAuth } from "../context/AuthContext";
 import { sendTransferEmail } from "../lib/email";
 import api from "../lib/api";
@@ -21,7 +22,7 @@ const SendMoney = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { token, user, createTransactionPin } = useAuth();
+  const { user, createTransactionPin } = useAuth();
 
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
@@ -56,11 +57,6 @@ const SendMoney = () => {
       const response = await api.post(
         "/transfers/recipient",
         { accountNumber },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
       );
 
       setRecipient(response.data.recipient);
@@ -120,24 +116,35 @@ const SendMoney = () => {
           description: description.trim() || undefined,
           transactionPin,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
       );
 
       const transfer = response.data.transfer;
 
       const transactionReference = transfer.senderTransaction.reference;
 
-      if (token) {
-        void dispatch(fetchDashboardData(token))
-          .unwrap()
-          .catch((refreshError) => {
-            console.error("Dashboard refresh failed after transfer:", refreshError);
-          });
-      }
+      // Update Dashboard Redux data.
+      dispatch(
+        applyOutgoingTransfer({
+          balance: Number(transfer.senderBalance),
+          amount: Number(transfer.senderTransaction.amount),
+          transaction: transfer.senderTransaction,
+          recipient: {
+            firstName: transfer.recipient.firstName,
+            lastName: transfer.recipient.lastName,
+          },
+        }),
+      );
+
+      // Add the successful transfer to Transactions Redux data.
+      dispatch(
+        addTransaction({
+          ...transfer.senderTransaction,
+          receiver: {
+            firstName: transfer.recipient.firstName,
+            lastName: transfer.recipient.lastName,
+          },
+        }),
+      );
 
       // Send receiver notification email.
       try {
@@ -193,11 +200,11 @@ const SendMoney = () => {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-20 max-w-5xl items-center justify-between px-4 sm:px-6">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/dashboard")}
             className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
           >
             <ArrowLeft size={18} />
-            Back
+            Back to dashboard
           </button>
 
           <div className="flex h-10 w-25 items-center justify-center">

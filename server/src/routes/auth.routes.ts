@@ -8,6 +8,7 @@ import {
   forgotPassword,
   resetPassword,
   setTransactionPin,
+  logout,
 } from "../controllers/auth.controller";
 
 import { authenticate } from "../middleware/auth.middleware";
@@ -60,6 +61,7 @@ const transactionPinLimiter = rateLimit({
 
 router.post("/register", register);
 router.post("/login", loginLimiter, login);
+router.post("/logout", logout);
 router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
 router.post("/reset-password", resetPasswordLimiter, resetPassword);
 router.post(

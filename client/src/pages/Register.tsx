@@ -3,6 +3,7 @@ import type { SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import PasswordInput from "../components/PasswordInput";
+import BrandLink from "../components/BrandLink";
 
 const Register = () => {
   const { register } = useAuth();
@@ -62,16 +63,13 @@ const Register = () => {
     <main className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto w-full max-w-md">
         <div className="mb-8">
-          <Link
-            to="/"
-            className="tracking-tight text-slate-900"
-          >
+          <BrandLink className="tracking-tight text-slate-900">
            <img
               src="/image/novera.png"
               alt="Noreva Logo"
               className=" w-30 object-contain"
             />
-          </Link>
+          </BrandLink>
 
           <h1 className="mt-8 text-3xl font-semibold tracking-tight text-slate-900">
             Open your account

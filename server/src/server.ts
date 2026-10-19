@@ -14,8 +14,8 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+  process.env.FRONTEND_URL ? new URL(process.env.FRONTEND_URL).origin : undefined,
+].filter((origin): origin is string => Boolean(origin));
 
 app.use(
   cors({
@@ -31,6 +31,25 @@ app.use(
 );
 
 app.use(express.json());
+app.use((req, res, next) => {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+
+  const origin = req.get("origin");
+  const frontendUrl = process.env.FRONTEND_URL;
+  const validOrigin = Boolean(origin && frontendUrl && (() => {
+    try {
+      const requestOrigin = new URL(origin).origin;
+      return allowedOrigins.includes(requestOrigin);
+    } catch {
+      return false;
+    }
+  })());
+
+  if (!validOrigin || req.get("x-requested-with") !== "XMLHttpRequest") {
+    return res.status(403).json({ success: false, message: "Invalid request origin" });
+  }
+  next();
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/transfers", transferRoutes);

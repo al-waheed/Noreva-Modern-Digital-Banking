@@ -2,6 +2,7 @@ import { useState, type SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import PasswordInput from "../components/PasswordInput";
+import BrandLink from "../components/BrandLink";
 
 const Login = () => {
   const { login } = useAuth();
@@ -35,13 +36,13 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="mb-8">
           <div className="mb-6">
-            <Link to="/" className="tracking-tight text-slate-900">
+            <BrandLink className="tracking-tight text-slate-900">
               <img
                 src="/image/novera.png"
                 alt="Noreva Logo"
                 className=" w-30 object-contain"
               />
-            </Link>
+            </BrandLink>
           </div>
 
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">

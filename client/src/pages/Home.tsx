@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import BrandLink from "../components/BrandLink";
 
 const Home = () => {
   return (
@@ -6,13 +7,13 @@ const Home = () => {
       {/* Navigation */}
       <header className="border-b border-slate-200">
         <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 lg:px-8">
-          <Link to="/" className="flex h-10 w-30 items-center justify-center">
+          <BrandLink className="flex h-10 w-30 items-center justify-center">
             <img
               src="/image/novera.png"
               alt="Noreva Logo"
               className="object-contain"
             />
-          </Link>
+          </BrandLink>
 
           <nav className="hidden items-center gap-8 md:flex">
             <a
@@ -264,13 +265,13 @@ const Home = () => {
       {/* Footer */}
       <footer className="border-t border-slate-200">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between lg:px-8">
-          <Link to="/" className="flex h-10 w-20">
+          <BrandLink className="flex h-10 w-20">
             <img
               src="/image/novera.png"
               alt="Noreva Logo"
               className="object-contain"
             />
-          </Link>
+          </BrandLink>
           <span>© 2026 Noreva. demonstration.</span>
         </div>
       </footer>

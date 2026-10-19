@@ -17,3 +17,7 @@ for (const key of requiredEnv) {
     throw new Error(`Missing required environment variable: ${key}`);
   }
 }
+
+if (process.env.JWT_SECRET!.length < 32) {
+  throw new Error("JWT_SECRET must be at least 32 characters");
+}

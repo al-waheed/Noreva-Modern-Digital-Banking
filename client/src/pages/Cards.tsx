@@ -230,7 +230,14 @@ const Cards = () => {
                   {/* Freeze / Unfreeze */}
                   <button
                     type="button"
-                    onClick={() => setIsFrozen((value) => !value)}
+                    onClick={() => {
+                      const freezing = !isFrozen;
+                      setIsFrozen(freezing);
+
+                      if (freezing) {
+                        setShowDetails(false);
+                      }
+                    }}
                     className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
                     <span className="flex items-center gap-3">

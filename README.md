@@ -191,9 +191,11 @@ Security was considered throughout the application rather than relying only on f
 ### Authentication
 
 - Passwords are hashed with bcrypt.
-- JWTs are used for authenticated API requests.
-- Protected API routes require a valid Bearer token.
-- Password reset tokens are randomly generated and expire after a limited period.
+- The server issues a 30-minute JWT in an HttpOnly cookie.
+- The browser sends the cookie automatically with API requests.
+- Protected API routes verify the JWT.
+- Logging out clears the cookie in the current browser; a copied token remains valid until it expires.
+- Password reset links use random tokens that expire after 30 minutes.
 - Authentication and password-reset endpoints use rate limiting.
 
 ### Transaction Security
@@ -310,6 +312,7 @@ The application will then be available through the Vite development server.
 ```text
 POST /api/auth/register
 POST /api/auth/login
+POST /api/auth/logout
 POST /api/auth/forgot-password
 POST /api/auth/reset-password
 POST /api/auth/transaction-pin

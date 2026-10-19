@@ -6,12 +6,12 @@ import {
   setNotifications,
   markNotificationAsRead,
 } from "../store/slices/notificationSlice";
-import { fetchDashboardData } from "../store/slices/dashboardSlice";
+import { setDashboardData } from "../store/slices/dashboardSlice";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
 const NotificationBell = () => {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
 
   const { notifications, unreadCount } = useSelector(
@@ -21,32 +21,23 @@ const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const previousNotificationIds = useRef(
-    notifications.map((notification) => notification.id),
-  );
+  const previousNotificationIds = useRef<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
-      if (!token) return;
+      if (!user) return;
 
       try {
-        const response = await api.get("/notifications", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await api.get("/notifications");
 
         const newNotifications = response.data.notifications;
 
         const previousIds = previousNotificationIds.current;
 
-        const hasNewReceivedMoneyNotification =
+        const hasNewNotification =
           previousIds.length > 0 &&
           newNotifications.some(
-            (notification: { id: string; title: string }) =>
-              ["Money received", "Scheduled payment sent"].includes(
-                notification.title,
-              ) &&
+            (notification: { id: string }) =>
               !previousIds.includes(notification.id),
           );
 
@@ -63,8 +54,21 @@ const NotificationBell = () => {
 
         // A new notification can mean the user received money.
         // Refresh the existing dashboard data and update Redux.
-        if (hasNewReceivedMoneyNotification) {
-          await dispatch(fetchDashboardData(token)).unwrap();
+        if (hasNewNotification) {
+          const dashboardResponse = await api.get("/dashboard");
+
+          const dashboard = dashboardResponse.data;
+
+          dispatch(
+            setDashboardData({
+              balance: Number(dashboard.account.balance),
+              moneyReceived: Number(dashboard.stats.moneyReceived),
+              moneySent: Number(dashboard.stats.moneySent),
+              transactionCount: Number(dashboard.stats.transactionCount),
+              monthlyActivity: dashboard.monthlyActivity,
+              recentTransactions: dashboard.transactions,
+            }),
+          );
         }
       } catch (error) {
         console.error("Unable to load notifications:", error);
@@ -78,7 +82,7 @@ const NotificationBell = () => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [token, dispatch]);
+  }, [user, dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -99,15 +103,7 @@ const NotificationBell = () => {
 
   const markAsRead = async (id: string) => {
     try {
-      await api.patch(
-        `/notifications/${id}/read`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      await api.patch(`/notifications/${id}/read`, {});
 
       dispatch(markNotificationAsRead(id));
     } catch (error) {

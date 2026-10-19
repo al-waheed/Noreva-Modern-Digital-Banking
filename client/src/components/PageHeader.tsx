@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import BrandLink from "./BrandLink";
 
 interface PageHeaderProps {
   onBack?: () => void;
@@ -29,7 +30,13 @@ const PageHeader = ({
           <div />
         )}
 
-        {rightContent ?? <div className="flex h-10 w-25 items-center justify-center" />}
+        {rightContent ? (
+          <BrandLink className="flex h-10 w-25 items-center justify-center">
+            {rightContent}
+          </BrandLink>
+        ) : (
+          <div className="flex h-10 w-25 items-center justify-center" />
+        )}
       </div>
 
       {children}

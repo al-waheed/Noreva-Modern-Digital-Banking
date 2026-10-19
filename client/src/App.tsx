@@ -11,6 +11,7 @@ import Cards from "./pages/Cards";
 import ScheduledPayments from "./pages/ScheduledPayments";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Settings from "./pages/Settings";
 
 const App = () => {
   return (
@@ -31,6 +32,7 @@ const App = () => {
           element={<TransactionReceipt />}
         />
         <Route path="/scheduled-payments" element={<ScheduledPayments />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

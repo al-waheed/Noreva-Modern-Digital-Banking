@@ -11,8 +11,8 @@ import api from "../lib/api";
 import type { AppDispatch } from "../store/store";
 
 import {
+  setDashboardData,
   clearDashboardData,
-  fetchDashboardData,
 } from "../store/slices/dashboardSlice";
 
 import { clearTransactions } from "../store/slices/transactionsSlice";
@@ -27,6 +27,7 @@ interface User {
   lastName: string;
   email: string;
   accountNumber?: string;
+  balance?: number;
   hasTransactionPin?: boolean;
   cards?: {
     id: string;
@@ -41,7 +42,6 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
@@ -66,57 +66,80 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const [user, setUser] = useState<User | null>(null);
-
-  const [token, setToken] = useState<string | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
-    if (!token) {
-      return;
-    }
-
-    const response = await api.get("/auth/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get("/auth/me");
 
     setUser(response.data.user);
-  }, [token]);
+  }, []);
+
+  const loadDashboardData = useCallback(async () => {
+    const response = await api.get("/dashboard");
+
+    const dashboard = response.data;
+
+    dispatch(
+      setDashboardData({
+        balance: Number(dashboard.account.balance),
+        moneyReceived: Number(dashboard.stats.moneyReceived),
+        moneySent: Number(dashboard.stats.moneySent),
+        transactionCount: Number(dashboard.stats.transactionCount),
+        monthlyActivity: dashboard.monthlyActivity,
+        recentTransactions: dashboard.transactions,
+      }),
+    );
+  }, [dispatch]);
+
+  const clearUserData = useCallback(() => {
+    setUser(null);
+    dispatch(clearDashboardData());
+    dispatch(clearTransactions());
+    dispatch(clearScheduledPayments());
+    dispatch(clearNotifications());
+  }, [dispatch]);
 
   useEffect(() => {
+    let isActive = true;
+
     const initializeApp = async () => {
-      if (!token) {
-        dispatch(clearDashboardData());
-        dispatch(clearTransactions());
-        dispatch(clearScheduledPayments());
-        dispatch(clearNotifications());
-
-        setIsLoading(false);
-        return;
-      }
-
       try {
         await refreshUser();
-        await dispatch(fetchDashboardData(token)).unwrap();
+        if (!isActive) return;
+        await loadDashboardData();
       } catch (error) {
-        console.log(error);
+        if (!isActive) return;
 
-        setToken(null);
-        setUser(null);
-
-        dispatch(clearDashboardData());
-        dispatch(clearTransactions());
-        dispatch(clearScheduledPayments());
-        dispatch(clearNotifications());
+        const status = (error as { response?: { status?: number } }).response
+          ?.status;
+        if (status === 401) {
+          clearUserData();
+        } else {
+          console.error("Unable to restore the signed-in user:", error);
+        }
       } finally {
-        setIsLoading(false);
+        if (isActive) setIsLoading(false);
       }
     };
 
-    initializeApp();
-  }, [token, refreshUser, dispatch]);
+    void initializeApp();
+
+    return () => {
+      isActive = false;
+    };
+  }, [refreshUser, loadDashboardData, clearUserData]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearUserData();
+      void api.post("/auth/logout").catch(() => undefined);
+    };
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+    return () => {
+      window.removeEventListener("auth:session-expired", handleSessionExpired);
+    };
+  }, [clearUserData]);
 
   const login = async (email: string, password: string) => {
     const response = await api.post("/auth/login", {
@@ -124,11 +147,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       password,
     });
 
-    const newToken = response.data.token;
-
-    setIsLoading(true);
-    setToken(newToken);
     setUser(response.data.user);
+    void loadDashboardData().catch((error) =>
+      console.error("Unable to load dashboard:", error),
+    );
   };
 
   const register = async (
@@ -146,29 +168,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       password,
     });
 
-    const newToken = response.data.token;
-
-    setIsLoading(true);
-    setToken(newToken);
     setUser(response.data.user);
+    void loadDashboardData().catch((error) =>
+      console.error("Unable to load dashboard:", error),
+    );
   };
 
   const createTransactionPin = async (pin: string) => {
-    if (!token) {
-      throw new Error("Authentication required");
-    }
-
-    await api.post(
-      "/auth/transaction-pin",
-      {
-        pin,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+    await api.post("/auth/transaction-pin", { pin });
 
     setUser((currentUser) =>
       currentUser
@@ -181,21 +188,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
-
-    // Clear all user-specific Redux data.
-    dispatch(clearDashboardData());
-    dispatch(clearTransactions());
-    dispatch(clearScheduledPayments());
-    dispatch(clearNotifications());
+    void api.post("/auth/logout").catch((error) =>
+      console.error("Unable to clear the server session:", error),
+    );
+    clearUserData();
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         isLoading,
         login,
         register,

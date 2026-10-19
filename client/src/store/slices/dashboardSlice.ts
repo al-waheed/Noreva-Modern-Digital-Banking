@@ -1,6 +1,7 @@
 import {
   createAsyncThunk,
   createSlice,
+  type PayloadAction,
 } from "@reduxjs/toolkit";
 import api from "../../lib/api";
 
@@ -45,12 +46,8 @@ interface DashboardState {
 
 export const fetchDashboardData = createAsyncThunk(
   "dashboard/fetchDashboardData",
-  async (token: string): Promise<DashboardData> => {
-    const response = await api.get("/dashboard", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  async (): Promise<DashboardData> => {
+    const response = await api.get("/dashboard");
 
     const dashboard = response.data;
 
@@ -75,6 +72,9 @@ const dashboardSlice = createSlice({
   initialState,
 
   reducers: {
+    setDashboardData: (state, action: PayloadAction<DashboardData>) => {
+      state.data = action.payload;
+    },
     clearDashboardData: (state) => {
       state.data = null;
     },
@@ -86,6 +86,6 @@ const dashboardSlice = createSlice({
   },
 });
 
-export const { clearDashboardData } = dashboardSlice.actions;
+export const { setDashboardData, clearDashboardData } = dashboardSlice.actions;
 
 export default dashboardSlice.reducer;

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { TransactionFilters } from "../components/transactions/TransactionFilters";
-import Pagination from "../components/Pagination";
+import { TransactionPagination } from "../components/transactions/TransactionPagination";
 import { TransactionSummary } from "../components/transactions/TransactionSummary";
 import { TransactionTable } from "../components/transactions/TransactionTable";
 import PageHeader from "../components/PageHeader";
@@ -21,7 +21,7 @@ import EmptyState from "../components/EmptyState";
 
 const Transactions = () => {
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
 
   const { transactions, isLoading } = useSelector(
@@ -32,7 +32,7 @@ const Transactions = () => {
 
   useEffect(() => {
     const fetchTransactions = async () => {
-      if (!token) {
+      if (!user) {
         dispatch(setTransactionsLoading(false));
         return;
       }
@@ -40,11 +40,7 @@ const Transactions = () => {
       dispatch(setTransactionsLoading(true));
 
       try {
-        const response = await api.get("/transactions", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await api.get("/transactions");
 
         dispatch(setTransactions(response.data.transactions));
       } catch (error) {
@@ -55,7 +51,7 @@ const Transactions = () => {
     };
 
     fetchTransactions();
-  }, [token, dispatch]);
+  }, [user, dispatch]);
 
   const {
     search,
@@ -97,7 +93,7 @@ const Transactions = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <PageHeader
-        onBack={() => navigate(-1)}
+        onBack={() => navigate("/dashboard")}
         rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
@@ -186,7 +182,7 @@ const Transactions = () => {
               />
 
               {totalPages > 1 && (
-                <Pagination
+                <TransactionPagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPrevious={() =>

@@ -3,8 +3,8 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { z } from "zod";
 import prisma from "../config/prisma";
-import jwt from "jsonwebtoken";
 import { createTransactionPin } from "../services/transactionPin.service";
+import { clearAuthCookie, setAuthCookie } from "../services/authToken.service";
 
 const registerSchema = z.object({
   firstName: z.string().min(2),
@@ -128,19 +128,11 @@ export const register = async (req: Request, res: Response) => {
       };
     });
 
-    const token = jwt.sign(
-      {
-        userId: resultTransaction.user.id,
-        email: resultTransaction.user.email,
-      },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "2d" },
-    );
+    setAuthCookie(res, resultTransaction.user.id);
 
     return res.status(201).json({
       success: true,
       message: "Account created successfully",
-      token,
       user: {
         id: resultTransaction.user.id,
         firstName: resultTransaction.user.firstName,
@@ -188,7 +180,11 @@ export const login = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        account: true,
+        account: {
+          include: {
+            wallet: true,
+          },
+        },
         cards: true,
       },
     });
@@ -209,27 +205,18 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-      },
-      process.env.JWT_SECRET as string,
-      {
-        expiresIn: "2d",
-      },
-    );
+    setAuthCookie(res, user.id);
 
     return res.json({
       success: true,
       message: "Login successful",
-      token,
       user: {
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
         accountNumber: user.account?.accountNumber,
+        balance: user.account?.wallet?.balance,
       },
     });
   } catch (error) {
@@ -240,6 +227,11 @@ export const login = async (req: Request, res: Response) => {
       message: "Something went wrong",
     });
   }
+};
+
+export const logout = (_req: Request, res: Response) => {
+  clearAuthCookie(res);
+  return res.json({ success: true, message: "Logged out" });
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
