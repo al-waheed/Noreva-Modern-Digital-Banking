@@ -8,6 +8,7 @@ import {
   forgotPassword,
   resetPassword,
   setTransactionPin,
+  changeTransactionPin,
   logout,
 } from "../controllers/auth.controller";
 
@@ -69,6 +70,12 @@ router.post(
   authenticate,
   transactionPinLimiter,
   setTransactionPin,
+);
+router.post(
+  "/transaction-pin/change",
+  authenticate,
+  transactionPinLimiter,
+  changeTransactionPin,
 );
 router.get("/me", authenticate, getMe);
 

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../config/prisma";
+import { processScheduledPayments } from "../services/scheduledPayment.service";
 import { verifyTransactionPin } from "../services/transactionPin.service";
 
 const createScheduledPaymentSchema = z.object({
@@ -24,6 +25,8 @@ export const getScheduledPayments = async (
         message: "Authentication required",
       });
     }
+
+    await processScheduledPayments();
 
     const payments = await prisma.scheduledPayment.findMany({
       where: {
@@ -176,7 +179,6 @@ export const createScheduledPayment = async (
         amount,
         description: description?.trim() || null,
         scheduledFor: date,
-        frequency: "ONCE",
         userId: req.userId,
         receiverId: receiverAccount.userId,
         status: "PENDING",

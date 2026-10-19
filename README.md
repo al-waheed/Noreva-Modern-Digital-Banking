@@ -305,6 +305,15 @@ yarn dev
 
 The application will then be available through the Vite development server.
 
+### Run Scheduled Payments on Render
+
+The web server's in-process timer is only a fallback; hosted services can sleep. Create a Render Cron Job for the `server` directory with:
+
+- Build command: `yarn install --frozen-lockfile && yarn build`
+- Start command: `yarn scheduled-payments`
+- Schedule: `* * * * *` (every minute)
+- Environment variable: `DATABASE_URL` (use the same database as the API)
+
 ## API Overview
 
 ### Authentication

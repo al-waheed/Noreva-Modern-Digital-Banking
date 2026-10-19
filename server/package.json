@@ -27,6 +27,7 @@
     "postinstall": "prisma skills sync || exit 0",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "prisma generate && tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "scheduled-payments": "node dist/scheduledPaymentsJob.js"
   }
 }

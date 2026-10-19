@@ -21,11 +21,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import type { RootState } from "../store/store";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../store/store";
+import { fetchDashboardData } from "../store/slices/dashboardSlice";
 import ReceiveMoneyModal from "../components/ReceiveMoneyModal";
 import NotificationBell from "../components/NotificationBell";
 import StatCard from "../components/StatCard";
@@ -36,6 +37,7 @@ import { formatCurrency } from "../utils/formatters";
 
 const Dashboard = () => {
   const { logout, user } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
 
   const dashboard = useSelector((state: RootState) => state.dashboard.data);
 
@@ -43,6 +45,10 @@ const Dashboard = () => {
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    void dispatch(fetchDashboardData());
+  }, [dispatch]);
 
   const firstName = user?.firstName;
   const balance = Number(dashboard?.balance || user?.balance || 0);
@@ -134,7 +140,14 @@ const Dashboard = () => {
             Account
           </p>
 
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={() => {
+              navigate("/settings");
+              setMobileMenuOpen(false);
+            }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
+          >
             <Settings size={18} />
             Settings
           </button>

@@ -6,67 +6,90 @@ import {
   ReceiptText,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import jsPDF from "jspdf";
 import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/PageHeader";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import api from "../lib/api";
-
-interface Transaction {
-  reference: string;
-  amount: string | number;
-  type: string;
-  status: string;
-  description?: string;
-  createdAt: string;
-
-  sender?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    account?: {
-      accountNumber: string;
-    };
-  };
-
-  receiver?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    account?: {
-      accountNumber: string;
-    };
-  };
-}
+import type { Transaction } from "../store/slices/transactionsSlice";
+import type { RootState } from "../store/store";
 
 const TransactionReceipt = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { reference } = useParams();
   const { user } = useAuth();
 
-  const [transaction, setTransaction] = useState<Transaction | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const cachedTransaction = useSelector((state: RootState) =>
+    state.transactions.transactions.find(
+      (item) => item.reference === reference,
+    ),
+  );
+  const routeTransaction = (
+    location.state as { transaction?: Transaction } | null
+  )?.transaction;
+  const availableTransaction =
+    cachedTransaction ??
+    (routeTransaction?.reference === reference ? routeTransaction : null) ??
+    null;
+
+  const [fetchedReceipt, setFetchedReceipt] = useState<{
+    reference: string;
+    transaction: Transaction;
+  } | null>(null);
+  const [failedReference, setFailedReference] = useState<string | null>(null);
+  const transaction =
+    availableTransaction ??
+    (fetchedReceipt && fetchedReceipt.reference === reference
+      ? fetchedReceipt.transaction
+      : null);
+  const isLoading = Boolean(
+    reference &&
+    !availableTransaction &&
+    fetchedReceipt?.reference !== reference &&
+    failedReference !== reference,
+  );
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
+    if (!user || !reference) return;
+
+    const existingTransaction =
+      cachedTransaction ??
+      (routeTransaction?.reference === reference ? routeTransaction : null) ??
+      null;
+
+    if (existingTransaction) {
+      return;
+    }
+
+    let isActive = true;
+
     const fetchTransaction = async () => {
       try {
         const response = await api.get(`/transactions/${reference}`);
 
-        setTransaction(response.data.transaction);
+        if (isActive) {
+          setFetchedReceipt({
+            reference,
+            transaction: response.data.transaction,
+          });
+        }
       } catch (error) {
         console.error("Failed to load transaction:", error);
-      } finally {
-        setIsLoading(false);
+        if (isActive) setFailedReference(reference);
       }
     };
 
-    if (user && reference) {
-      fetchTransaction();
-    }
-  }, [user, reference]);
+    void fetchTransaction();
+
+    return () => {
+      isActive = false;
+    };
+  }, [user, reference, cachedTransaction, routeTransaction]);
 
   const copyReference = async () => {
     if (!transaction) return;
@@ -292,7 +315,7 @@ const TransactionReceipt = () => {
     ctx.textAlign = "right";
 
     ctx.fillText(
-      `Noreva | ${transaction.sender?.account?.accountNumber || "N/A"}`,
+      `Noreva | ${transaction.sender?.account?.accountNumber}`,
       width - 105,
       477,
     );
@@ -334,7 +357,7 @@ const TransactionReceipt = () => {
     ctx.textAlign = "right";
 
     ctx.fillText(
-      `Noreva | ${transaction.receiver?.account?.accountNumber || "N/A"}`,
+      `Noreva | ${transaction.receiver?.account?.accountNumber}`,
       width - 105,
       557,
     );
@@ -482,10 +505,10 @@ const TransactionReceipt = () => {
           <p className="font-semibold text-slate-800">Transaction not found</p>
 
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/transactions")}
             className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
           >
-            Back to dashboard
+            Back to transactions
           </button>
         </div>
       </div>
@@ -497,8 +520,8 @@ const TransactionReceipt = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <PageHeader
-        onBack={() => navigate("/dashboard")}
-        backLabel="Dashboard"
+        onBack={() => navigate("/transactions")}
+        backLabel="Transactions"
         rightContent={
           <div className="flex h-10 w-25 items-center justify-center">
             <img
@@ -548,7 +571,7 @@ const TransactionReceipt = () => {
                 </p>
 
                 <p className="mt-0.5 text-xs text-slate-400">
-                  Noreva | {transaction.sender?.account?.accountNumber || "N/A"}
+                  Noreva | {transaction.sender?.account?.accountNumber}
                 </p>
               </div>
             </div>
@@ -566,7 +589,7 @@ const TransactionReceipt = () => {
 
                 <p className="mt-0.5 text-xs text-slate-400">
                   Noreva |{" "}
-                  {transaction.receiver?.account?.accountNumber || "N/A"}
+                  {transaction.receiver?.account?.accountNumber}
                 </p>
               </div>
             </div>
@@ -656,7 +679,7 @@ const TransactionReceipt = () => {
         {/* DONE */}
 
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/transactions")}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           <ReceiptText size={17} />

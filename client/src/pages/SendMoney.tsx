@@ -2,10 +2,6 @@ import { ArrowLeft, CheckCircle2, Loader2, Send, User } from "lucide-react";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import type { AppDispatch } from "../store/store";
-import { applyOutgoingTransfer } from "../store/slices/dashboardSlice";
-import { addTransaction } from "../store/slices/transactionsSlice";
 import { useAuth } from "../context/AuthContext";
 import { sendTransferEmail } from "../lib/email";
 import api from "../lib/api";
@@ -20,7 +16,6 @@ interface Recipient {
 
 const SendMoney = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
 
   const { user, createTransactionPin } = useAuth();
 
@@ -122,30 +117,6 @@ const SendMoney = () => {
 
       const transactionReference = transfer.senderTransaction.reference;
 
-      // Update Dashboard Redux data.
-      dispatch(
-        applyOutgoingTransfer({
-          balance: Number(transfer.senderBalance),
-          amount: Number(transfer.senderTransaction.amount),
-          transaction: transfer.senderTransaction,
-          recipient: {
-            firstName: transfer.recipient.firstName,
-            lastName: transfer.recipient.lastName,
-          },
-        }),
-      );
-
-      // Add the successful transfer to Transactions Redux data.
-      dispatch(
-        addTransaction({
-          ...transfer.senderTransaction,
-          receiver: {
-            firstName: transfer.recipient.firstName,
-            lastName: transfer.recipient.lastName,
-          },
-        }),
-      );
-
       // Send receiver notification email.
       try {
         await sendTransferEmail({
@@ -163,7 +134,25 @@ const SendMoney = () => {
       setShowPinModal(false);
       setShowCreatePinModal(false);
 
-      navigate(`/transactions/${transactionReference}`);
+      navigate(`/transactions/${transactionReference}`, {
+        state: {
+          transaction: {
+            ...transfer.senderTransaction,
+            sender: {
+              firstName: user?.firstName ?? "",
+              lastName: user?.lastName ?? "",
+              email: user?.email,
+              account: { accountNumber: user?.accountNumber ?? "" },
+            },
+            receiver: {
+              firstName: transfer.recipient.firstName,
+              lastName: transfer.recipient.lastName,
+              email: transfer.recipient.email,
+              account: { accountNumber: transfer.recipient.accountNumber },
+            },
+          },
+        },
+      });
     } catch (error: any) {
       setPinError(
         error.response?.data?.message || "Transfer failed. Please try again.",

@@ -3,7 +3,10 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { z } from "zod";
 import prisma from "../config/prisma";
-import { createTransactionPin } from "../services/transactionPin.service";
+import {
+  changeTransactionPin as updateTransactionPin,
+  createTransactionPin,
+} from "../services/transactionPin.service";
 import { clearAuthCookie, setAuthCookie } from "../services/authToken.service";
 
 const registerSchema = z.object({
@@ -30,6 +33,11 @@ const resetPasswordSchema = z.object({
 
 const transactionPinSchema = z.object({
   pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits"),
+});
+
+const changeTransactionPinSchema = z.object({
+  currentPin: z.string().regex(/^\d{4}$/, "Current PIN must be 4 digits"),
+  newPin: z.string().regex(/^\d{4}$/, "New PIN must be 4 digits"),
 });
 
 const generateAccountNumber = () => {
@@ -138,6 +146,9 @@ export const register = async (req: Request, res: Response) => {
         firstName: resultTransaction.user.firstName,
         lastName: resultTransaction.user.lastName,
         email: resultTransaction.user.email,
+        phone: resultTransaction.user.phone,
+        cards: [resultTransaction.card],
+        hasTransactionPin: false,
       },
       account: {
         accountNumber: resultTransaction.account.accountNumber,
@@ -215,8 +226,11 @@ export const login = async (req: Request, res: Response) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone,
         accountNumber: user.account?.accountNumber,
         balance: user.account?.wallet?.balance,
+        cards: user.cards,
+        hasTransactionPin: Boolean(user.transactionPinHash),
       },
     });
   } catch (error) {
@@ -469,6 +483,65 @@ export const setTransactionPin = async (
   }
 };
 
+export const changeTransactionPin = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const result = changeTransactionPinSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error.issues[0]?.message || "Invalid PIN details",
+      });
+    }
+
+    await updateTransactionPin(
+      req.userId,
+      result.data.currentPin,
+      result.data.newPin,
+    );
+
+    return res.json({
+      success: true,
+      message: "Transaction PIN changed successfully",
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "USER_NOT_FOUND") {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (
+        error.message === "PIN_NOT_SET" ||
+        error.message === "INCORRECT_CURRENT_PIN" ||
+        error.message === "PIN_UNCHANGED"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
+    }
+
+    console.error("Change transaction PIN error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to change transaction PIN",
+    });
+  }
+};
+
 export const getMe = async (
   req: Request & { userId?: string },
   res: Response,
@@ -507,6 +580,7 @@ export const getMe = async (
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone,
         accountNumber: user.account?.accountNumber,
         balance: user.account?.wallet?.balance,
         cards: user.cards,

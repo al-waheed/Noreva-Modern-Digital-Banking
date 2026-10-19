@@ -10,10 +10,7 @@ import { useDispatch } from "react-redux";
 import api from "../lib/api";
 import type { AppDispatch } from "../store/store";
 
-import {
-  setDashboardData,
-  clearDashboardData,
-} from "../store/slices/dashboardSlice";
+import { clearDashboardData } from "../store/slices/dashboardSlice";
 
 import { clearTransactions } from "../store/slices/transactionsSlice";
 
@@ -26,6 +23,7 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string | null;
   accountNumber?: string;
   balance?: number;
   hasTransactionPin?: boolean;
@@ -52,6 +50,7 @@ interface AuthContextType {
     password: string,
   ) => Promise<void>;
   createTransactionPin: (pin: string) => Promise<void>;
+  changeTransactionPin: (currentPin: string, newPin: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   logout: () => void;
 }
@@ -74,23 +73,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(response.data.user);
   }, []);
 
-  const loadDashboardData = useCallback(async () => {
-    const response = await api.get("/dashboard");
-
-    const dashboard = response.data;
-
-    dispatch(
-      setDashboardData({
-        balance: Number(dashboard.account.balance),
-        moneyReceived: Number(dashboard.stats.moneyReceived),
-        moneySent: Number(dashboard.stats.moneySent),
-        transactionCount: Number(dashboard.stats.transactionCount),
-        monthlyActivity: dashboard.monthlyActivity,
-        recentTransactions: dashboard.transactions,
-      }),
-    );
-  }, [dispatch]);
-
   const clearUserData = useCallback(() => {
     setUser(null);
     dispatch(clearDashboardData());
@@ -105,8 +87,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const initializeApp = async () => {
       try {
         await refreshUser();
-        if (!isActive) return;
-        await loadDashboardData();
       } catch (error) {
         if (!isActive) return;
 
@@ -127,7 +107,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return () => {
       isActive = false;
     };
-  }, [refreshUser, loadDashboardData, clearUserData]);
+  }, [refreshUser, clearUserData]);
 
   useEffect(() => {
     const handleSessionExpired = () => {
@@ -142,15 +122,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [clearUserData]);
 
   const login = async (email: string, password: string) => {
-    const response = await api.post("/auth/login", {
+    await api.post("/auth/login", {
       email,
       password,
     });
 
-    setUser(response.data.user);
-    void loadDashboardData().catch((error) =>
-      console.error("Unable to load dashboard:", error),
-    );
+    await refreshUser();
   };
 
   const register = async (
@@ -160,7 +137,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     phone: string,
     password: string,
   ) => {
-    const response = await api.post("/auth/register", {
+    await api.post("/auth/register", {
       firstName,
       lastName,
       email,
@@ -168,10 +145,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       password,
     });
 
-    setUser(response.data.user);
-    void loadDashboardData().catch((error) =>
-      console.error("Unable to load dashboard:", error),
-    );
+    await refreshUser();
   };
 
   const createTransactionPin = async (pin: string) => {
@@ -185,6 +159,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         : currentUser,
     );
+  };
+
+  const changeTransactionPin = async (
+    currentPin: string,
+    newPin: string,
+  ) => {
+    await api.post("/auth/transaction-pin/change", {
+      currentPin,
+      newPin,
+    });
   };
 
   const logout = () => {
@@ -202,6 +186,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         login,
         register,
         createTransactionPin,
+        changeTransactionPin,
         refreshUser,
         logout,
       }}

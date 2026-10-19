@@ -82,7 +82,6 @@ model ScheduledPayment {
   amount       Decimal           @db.Decimal(18, 2)
   description  String?
   scheduledFor DateTime
-  frequency    ScheduleFrequency @default(ONCE)
   status       TransactionStatus @default(PENDING)
   userId       String
   receiverId   String?
@@ -123,13 +122,6 @@ enum CardStatus {
   ACTIVE
   BLOCKED
   EXPIRED
-}
-
-enum ScheduleFrequency {
-  ONCE
-  DAILY
-  WEEKLY
-  MONTHLY
 }
 
 model PasswordResetToken {
