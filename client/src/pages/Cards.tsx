@@ -10,16 +10,19 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import api from "../lib/api";
 
 const Cards = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const [showDetails, setShowDetails] = useState(false);
-  const [isFrozen, setIsFrozen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [error, setError] = useState("");
 
   const card = user?.cards?.[0];
+  const isFrozen = card?.status === "BLOCKED";
 
   const formatCardNumber = (cardNumber: string) => {
     return cardNumber.replace(/(.{4})/g, "$1 ").trim();
@@ -35,6 +38,32 @@ const Cards = () => {
     setTimeout(() => {
       setCopied(false);
     }, 1500);
+  };
+
+  const toggleCardStatus = async () => {
+    if (!card || isUpdatingStatus) return;
+
+    const nextStatus = isFrozen ? "ACTIVE" : "BLOCKED";
+    setIsUpdatingStatus(true);
+    setError("");
+
+    try {
+      await api.patch(`/cards/${card.id}/status`, { status: nextStatus });
+      await refreshUser();
+
+      if (nextStatus === "BLOCKED") {
+        setShowDetails(false);
+      }
+    } catch (error: unknown) {
+      const responseMessage = (
+        error as { response?: { data?: { message?: string } } }
+      ).response?.data?.message;
+      setError(
+        responseMessage || "Unable to update card status.",
+      );
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   if (!card) {
@@ -184,6 +213,12 @@ const Cards = () => {
                 </div>
 
                 <div className="mt-6 space-y-3">
+                  {error && (
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {error}
+                    </p>
+                  )}
+
                   {/* Show / Hide */}
                   <button
                     type="button"
@@ -230,15 +265,9 @@ const Cards = () => {
                   {/* Freeze / Unfreeze */}
                   <button
                     type="button"
-                    onClick={() => {
-                      const freezing = !isFrozen;
-                      setIsFrozen(freezing);
-
-                      if (freezing) {
-                        setShowDetails(false);
-                      }
-                    }}
-                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    onClick={toggleCardStatus}
+                    disabled={isUpdatingStatus}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span className="flex items-center gap-3">
                       {isFrozen ? (
@@ -247,7 +276,11 @@ const Cards = () => {
                         <Lock className="h-4 w-4" />
                       )}
 
-                      {isFrozen ? "Unfreeze card" : "Freeze card"}
+                      {isUpdatingStatus
+                        ? "Updating card..."
+                        : isFrozen
+                          ? "Unfreeze card"
+                          : "Freeze card"}
                     </span>
                   </button>
                 </div>

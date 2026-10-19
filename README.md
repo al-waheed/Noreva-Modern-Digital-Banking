@@ -373,7 +373,6 @@ Possible future improvements include:
 - Docker deployment
 - Improved application monitoring
 - More advanced financial analytics
-- Additional card functionality
 - Production-grade background job processing
 - Additional financial services
 

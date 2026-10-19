@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes";
 import transferRoutes from "./routes/transfer.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import transactionRoutes from "./routes/transaction.routes";
+import cardRoutes from "./routes/card.routes";
 import notificationRoutes from "./routes/notification.routes";
 
 const app = express();
@@ -52,6 +53,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/transfers", transferRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/cards", cardRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 app.get("/api/health", async (_req, res) => {
