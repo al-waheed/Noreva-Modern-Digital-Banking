@@ -121,7 +121,7 @@ const NotificationBell = () => {
             </button>
           </div>
 
-          <div className="max-h-360px overflow-y-auto">
+          <div className="max-h-90 overflow-y-auto overscroll-contain">
             {notifications.length === 0 ? (
               <div className="px-5 py-10 text-center">
                 <Bell className="mx-auto h-6 w-6 text-slate-300" />
