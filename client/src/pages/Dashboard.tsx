@@ -128,14 +128,6 @@ const Dashboard = () => {
             Cards
           </button>
 
-          <button
-            onClick={() => navigate("/scheduled-payments")}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
-          >
-            <Wallet size={18} />
-            Scheduled payments
-          </button>
-
           <p className="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
             Account
           </p>

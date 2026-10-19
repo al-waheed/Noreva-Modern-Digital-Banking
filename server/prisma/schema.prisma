@@ -21,8 +21,6 @@ model User {
   account              Account?
   cards                Card[]
   notifications        Notification[]
-  receivedPayments     ScheduledPayment[]   @relation("ReceivedScheduledPayments")
-  scheduledPayments    ScheduledPayment[]   @relation("ScheduledPayments")
   receivedTransactions Transaction[]        @relation("ReceiverTransactions")
   sentTransactions     Transaction[]        @relation("SenderTransactions")
   passwordResetTokens  PasswordResetToken[]
@@ -75,19 +73,6 @@ model Card {
   userId      String
   createdAt   DateTime   @default(now())
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model ScheduledPayment {
-  id           String            @id @default(cuid())
-  amount       Decimal           @db.Decimal(18, 2)
-  description  String?
-  scheduledFor DateTime
-  status       TransactionStatus @default(PENDING)
-  userId       String
-  receiverId   String?
-  createdAt    DateTime          @default(now())
-  receiver     User?             @relation("ReceivedScheduledPayments", fields: [receiverId], references: [id])
-  user         User              @relation("ScheduledPayments", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {

@@ -8,7 +8,6 @@ import SendMoney from "./pages/SendMoney";
 import Transactions from "./pages/Transactions";
 import TransactionReceipt from "./pages/TransactionReceipt";
 import Cards from "./pages/Cards";
-import ScheduledPayments from "./pages/ScheduledPayments";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Settings from "./pages/Settings";
@@ -31,7 +30,6 @@ const App = () => {
           path="/transactions/:reference"
           element={<TransactionReceipt />}
         />
-        <Route path="/scheduled-payments" element={<ScheduledPayments />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
 

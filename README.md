@@ -2,7 +2,7 @@
 
 Noreva is a fintech web application built to simulate a modern digital banking experience for Nigerian users.
 
-It demonstrates a full stack banking workflow including authentication, digital wallets, money transfers, transaction history, transaction PIN protection, virtual cards, scheduled payments, notifications, password recovery, and financial reporting.
+It demonstrates a full stack banking workflow including authentication, digital wallets, money transfers, transaction history, transaction PIN protection, virtual cards, notifications, password recovery, and financial reporting.
 
 > **Note:** Noreva is a demo application. It does not process real money or connect to real banking infrastructure.
 
@@ -80,14 +80,6 @@ It demonstrates a full stack banking workflow including authentication, digital 
 - Copy card details
 - Freeze/unfreeze card
 - Physical card interface for future expansion
-
-### Scheduled Payments
-
-- Create scheduled payments
-- View scheduled payments
-- Cancel scheduled payments
-- Automatic scheduled-payment processing
-- Support for one-time and recurring payments
 
 ### Notifications
 
@@ -179,10 +171,9 @@ Redux Toolkit manages shared financial data such as:
 - Monthly activity
 - Recent transactions
 - Transaction history
-- Scheduled payments
 - Notifications
 
-The backend handles authentication, wallet operations, transfers, transaction processing, scheduled payments, notifications and database access.
+The backend handles authentication, wallet operations, transfers, transaction processing, notifications and database access.
 
 ## Security
 
@@ -211,7 +202,7 @@ Security was considered throughout the application rather than relying only on f
 
 User-owned resources are scoped using the authenticated user's ID.
 
-Transaction, notification, dashboard and scheduled-payment operations are associated with the authenticated user rather than trusting user IDs supplied by the client.
+Transaction, notification and dashboard operations are associated with the authenticated user rather than trusting user IDs supplied by the client.
 
 This prevents users from simply changing an ID or reference to access another user's financial data.
 
@@ -305,15 +296,6 @@ yarn dev
 
 The application will then be available through the Vite development server.
 
-### Run Scheduled Payments on Render
-
-The web server's in-process timer is only a fallback; hosted services can sleep. Create a Render Cron Job for the `server` directory with:
-
-- Build command: `yarn install --frozen-lockfile && yarn build`
-- Start command: `yarn scheduled-payments`
-- Schedule: `* * * * *` (every minute)
-- Environment variable: `DATABASE_URL` (use the same database as the API)
-
 ## API Overview
 
 ### Authentication
@@ -349,14 +331,6 @@ GET /api/transactions/:reference
 ```
 
 Search, date filtering, pagination and PDF statement generation are handled on the frontend using the transaction data returned by the API.
-
-### Scheduled Payments
-
-```text
-GET   /api/scheduled-payments
-POST  /api/scheduled-payments
-PATCH /api/scheduled-payments/:id/cancel
-```
 
 ### Notifications
 

@@ -6,9 +6,7 @@ import authRoutes from "./routes/auth.routes";
 import transferRoutes from "./routes/transfer.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import transactionRoutes from "./routes/transaction.routes";
-import scheduledPaymentRoutes from "./routes/scheduledPayment.routes";
 import notificationRoutes from "./routes/notification.routes";
-import { processScheduledPayments } from "./services/scheduledPayment.service";
 
 const app = express();
 
@@ -54,7 +52,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/transfers", transferRoutes);
 app.use("/api/transactions", transactionRoutes);
-app.use("/api/scheduled-payments", scheduledPaymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 app.get("/api/health", async (_req, res) => {
@@ -80,9 +77,3 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
-setInterval(() => {
-  processScheduledPayments();
-}, 60 * 1000);
-
-processScheduledPayments();

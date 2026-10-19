@@ -14,8 +14,6 @@ import { clearDashboardData } from "../store/slices/dashboardSlice";
 
 import { clearTransactions } from "../store/slices/transactionsSlice";
 
-import { clearScheduledPayments } from "../store/slices/scheduledPaymentsSlice";
-
 import { clearNotifications } from "../store/slices/notificationSlice";
 
 interface User {
@@ -77,7 +75,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
     dispatch(clearDashboardData());
     dispatch(clearTransactions());
-    dispatch(clearScheduledPayments());
     dispatch(clearNotifications());
   }, [dispatch]);
 
