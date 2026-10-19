@@ -3,11 +3,10 @@ import { Bell, Check, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../store/store";
 import {
-  setNotifications,
-  markNotificationAsRead,
+  fetchNotifications,
+  markNotificationRead,
 } from "../store/slices/notificationSlice";
-import { setDashboardData } from "../store/slices/dashboardSlice";
-import api from "../lib/api";
+import { fetchDashboardData } from "../store/slices/dashboardSlice";
 import { useAuth } from "../context/AuthContext";
 
 const NotificationBell = () => {
@@ -21,54 +20,34 @@ const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const previousNotificationIds = useRef<string[]>([]);
+  const previousNotificationIds = useRef<string[] | null>(null);
 
   useEffect(() => {
     const load = async () => {
       if (!user) return;
 
       try {
-        const response = await api.get("/notifications");
-
-        const newNotifications = response.data.notifications;
+        const { notifications: newNotifications } = await dispatch(
+          fetchNotifications(),
+        ).unwrap();
 
         const previousIds = previousNotificationIds.current;
 
         const hasNewNotification =
-          previousIds.length > 0 &&
+          previousIds !== null &&
           newNotifications.some(
             (notification: { id: string }) =>
               !previousIds.includes(notification.id),
           );
-
-        dispatch(
-          setNotifications({
-            notifications: newNotifications,
-            unreadCount: response.data.unreadCount,
-          }),
-        );
 
         previousNotificationIds.current = newNotifications.map(
           (notification: { id: string }) => notification.id,
         );
 
         // A new notification can mean the user received money.
-        // Refresh the existing dashboard data and update Redux.
+        // Refresh dashboard data through its Redux thunk.
         if (hasNewNotification) {
-          const dashboardResponse = await api.get("/dashboard");
-
-          const dashboard = dashboardResponse.data;
-
-          dispatch(
-            setDashboardData({
-              balance: Number(dashboard.account.balance),
-              moneyReceived: Number(dashboard.stats.moneyReceived),
-              moneySent: Number(dashboard.stats.moneySent),
-              transactionCount: Number(dashboard.stats.transactionCount),
-              monthlyActivity: dashboard.monthlyActivity,
-              recentTransactions: dashboard.transactions,
-            }),
-          );
+          void dispatch(fetchDashboardData());
         }
       } catch (error) {
         console.error("Unable to load notifications:", error);
@@ -103,9 +82,7 @@ const NotificationBell = () => {
 
   const markAsRead = async (id: string) => {
     try {
-      await api.patch(`/notifications/${id}/read`, {});
-
-      dispatch(markNotificationAsRead(id));
+      await dispatch(markNotificationRead(id)).unwrap();
     } catch (error) {
       console.error("Unable to mark notification as read:", error);
     }

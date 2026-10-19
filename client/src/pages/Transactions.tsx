@@ -8,12 +8,8 @@ import { TransactionSummary } from "../components/transactions/TransactionSummar
 import { TransactionTable } from "../components/transactions/TransactionTable";
 import PageHeader from "../components/PageHeader";
 import { useAuth } from "../context/AuthContext";
-import api from "../lib/api";
 import type { AppDispatch, RootState } from "../store/store";
-import {
-  setTransactions,
-  setTransactionsLoading,
-} from "../store/slices/transactionsSlice";
+import { fetchTransactions } from "../store/slices/transactionsSlice";
 import { useTransactionFilters } from "../hooks/useTransactionFilters";
 import { downloadTransactionPdf } from "../utils/transactionPdf";
 import { formatCurrency, formatDate } from "../utils/formatters";
@@ -31,26 +27,7 @@ const Transactions = () => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!user) {
-        dispatch(setTransactionsLoading(false));
-        return;
-      }
-
-      dispatch(setTransactionsLoading(true));
-
-      try {
-        const response = await api.get("/transactions");
-
-        dispatch(setTransactions(response.data.transactions));
-      } catch (error) {
-        console.error("Failed to load transactions:", error);
-
-        dispatch(setTransactionsLoading(false));
-      }
-    };
-
-    fetchTransactions();
+    if (user) void dispatch(fetchTransactions());
   }, [user, dispatch]);
 
   const {

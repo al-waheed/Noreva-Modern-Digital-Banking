@@ -1,11 +1,4 @@
-import {
-  Copy,
-  Eye,
-  EyeOff,
-  Lock,
-  ShieldCheck,
-  Unlock,
-} from "lucide-react";
+import { Copy, Eye, EyeOff, Lock, ShieldCheck, Unlock } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -58,9 +51,7 @@ const Cards = () => {
       const responseMessage = (
         error as { response?: { data?: { message?: string } } }
       ).response?.data?.message;
-      setError(
-        responseMessage || "Unable to update card status.",
-      );
+      setError(responseMessage || "Unable to update card status.");
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -119,7 +110,7 @@ const Cards = () => {
               <span
                 className={`rounded-full px-3 py-1 text-xs font-medium ${
                   isFrozen
-                    ? "bg-slate-100 text-slate-600"
+                    ? "bg-yellow-50 text-yellow-700"
                     : "bg-emerald-50 text-emerald-700"
                 }`}
               >
@@ -300,7 +291,7 @@ const Cards = () => {
                 </p>
               </div>
 
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              <span className="rounded-full bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700">
                 Coming soon
               </span>
             </div>

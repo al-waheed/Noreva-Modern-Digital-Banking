@@ -217,7 +217,11 @@ const TransactionReceipt = () => {
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 34px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("Transfer Receipt", width / 2, 130);
+    ctx.fillText(
+      isReceived ? "Money Received Receipt" : "Transfer Receipt",
+      width / 2,
+      130,
+    );
 
     // --------------------------------------------------
     // SUCCESS ICON
@@ -240,7 +244,11 @@ const TransactionReceipt = () => {
 
     ctx.fillStyle = "#15803d";
     ctx.font = "bold 22px Arial";
-    ctx.fillText("TRANSFER SUCCESSFUL", width / 2, 255);
+    ctx.fillText(
+      isReceived ? "MONEY RECEIVED" : "TRANSFER SUCCESSFUL",
+      width / 2,
+      255,
+    );
 
     // --------------------------------------------------
     // AMOUNT
@@ -248,7 +256,11 @@ const TransactionReceipt = () => {
 
     ctx.fillStyle = "#64748b";
     ctx.font = "20px Arial";
-    ctx.fillText("Amount sent", width / 2, 315);
+    ctx.fillText(
+      isReceived ? "Amount received" : "Amount sent",
+      width / 2,
+      315,
+    );
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 42px Arial";
@@ -413,7 +425,9 @@ const TransactionReceipt = () => {
     ctx.fillText("Noreva — Modern Digital Banking", width / 2, 1030);
 
     ctx.fillText(
-      "This receipt is a record of your successful transfer.",
+      isReceived
+        ? "This receipt is a record of money received."
+        : "This receipt is a record of your successful transfer.",
       width / 2,
       1060,
     );
@@ -516,6 +530,7 @@ const TransactionReceipt = () => {
   }
 
   const isSuccessful = transaction.status.toLowerCase() === "success";
+  const isReceived = transaction.receiverId === user?.id;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -537,14 +552,18 @@ const TransactionReceipt = () => {
 
       <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <div className="mb-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-white bg-green-600">
             <CheckCircle2 size={27} />
           </div>
 
-          <h1 className="mt-4 text-2xl font-semibold">Transfer successful</h1>
+          <h1 className="mt-4 text-2xl font-semibold">
+            {isReceived ? "Money received" : "Transfer successful"}
+          </h1>
 
           <p className="mt-1 text-sm text-slate-500">
-            Your money has been sent successfully.
+            {isReceived
+              ? "You received money successfully."
+              : "Your money has been sent successfully."}
           </p>
         </div>
 
@@ -552,7 +571,9 @@ const TransactionReceipt = () => {
           {/* AMOUNT */}
 
           <div className="border-b border-slate-200 px-6 py-7 text-center">
-            <p className="text-sm text-slate-500">Amount sent</p>
+            <p className="text-sm text-slate-500">
+              {isReceived ? "Amount received" : "Amount sent"}
+            </p>
 
             <p className="mt-2 text-3xl font-semibold tracking-tight">
               {formatCurrency(transaction.amount)}
@@ -588,8 +609,7 @@ const TransactionReceipt = () => {
                 </p>
 
                 <p className="mt-0.5 text-xs text-slate-400">
-                  Noreva |{" "}
-                  {transaction.receiver?.account?.accountNumber}
+                  Noreva | {transaction.receiver?.account?.accountNumber}
                 </p>
               </div>
             </div>

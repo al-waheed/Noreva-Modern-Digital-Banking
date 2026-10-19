@@ -1,4 +1,5 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import api from "../../lib/api";
 
 export interface Transaction {
   id: string;
@@ -33,6 +34,14 @@ interface TransactionsState {
   isLoading: boolean;
 }
 
+export const fetchTransactions = createAsyncThunk(
+  "transactions/fetchTransactions",
+  async (): Promise<Transaction[]> => {
+    const response = await api.get("/transactions");
+    return response.data.transactions;
+  },
+);
+
 const initialState: TransactionsState = {
   transactions: [],
   isLoading: false,
@@ -44,26 +53,26 @@ const transactionsSlice = createSlice({
   initialState,
 
   reducers: {
-    setTransactions: (state, action: PayloadAction<Transaction[]>) => {
-      state.transactions = action.payload;
-      state.isLoading = false;
-    },
-
-    setTransactionsLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
-    },
-
     clearTransactions: (state) => {
       state.transactions = [];
       state.isLoading = false;
     },
   },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchTransactions.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchTransactions.fulfilled, (state, action) => {
+        state.transactions = action.payload;
+        state.isLoading = false;
+      })
+      .addCase(fetchTransactions.rejected, (state) => {
+        state.isLoading = false;
+      });
+  },
 });
 
-export const {
-  setTransactions,
-  setTransactionsLoading,
-  clearTransactions,
-} = transactionsSlice.actions;
+export const { clearTransactions } = transactionsSlice.actions;
 
 export default transactionsSlice.reducer;

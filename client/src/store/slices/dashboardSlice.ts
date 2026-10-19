@@ -1,7 +1,6 @@
 import {
   createAsyncThunk,
   createSlice,
-  type PayloadAction,
 } from "@reduxjs/toolkit";
 import api from "../../lib/api";
 
@@ -72,9 +71,6 @@ const dashboardSlice = createSlice({
   initialState,
 
   reducers: {
-    setDashboardData: (state, action: PayloadAction<DashboardData>) => {
-      state.data = action.payload;
-    },
     clearDashboardData: (state) => {
       state.data = null;
     },
@@ -86,6 +82,6 @@ const dashboardSlice = createSlice({
   },
 });
 
-export const { setDashboardData, clearDashboardData } = dashboardSlice.actions;
+export const { clearDashboardData } = dashboardSlice.actions;
 
 export default dashboardSlice.reducer;
