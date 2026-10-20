@@ -41,7 +41,7 @@ It demonstrates a full stack banking workflow including authentication, digital 
 
 - Create a secure transaction PIN
 - Transaction PIN required before sending money
-- Server side PIN verification
+- Server-side PIN verification
 - PIN hashing
 - Protection against unauthorized transfers
 
@@ -49,12 +49,12 @@ It demonstrates a full stack banking workflow including authentication, digital 
 
 - Search for registered recipients
 - Send money between Noreva users
-- Self transfer prevention
+- Self-transfer prevention
 - Insufficient-balance protection
 - Atomic wallet balance updates
 - Transaction references
 - Sender and receiver transaction records
-- In app transfer notifications
+- In-app transfer notifications
 - Email notifications for received transfers
 
 ### Transactions
@@ -75,7 +75,7 @@ It demonstrates a full stack banking workflow including authentication, digital 
 ### Cards
 
 - Virtual card
-- Card number, expiry date and CVV
+- Card number, expiry date, and CVV
 - Show/hide card details
 - Copy card details
 - Freeze/unfreeze card
@@ -83,7 +83,7 @@ It demonstrates a full stack banking workflow including authentication, digital 
 
 ### Notifications
 
-- In app notification centre
+- In-app notification centre
 - Unread notification count
 - Mark notifications as read
 - Transfer notifications
@@ -241,7 +241,7 @@ EMAILJS_PRIVATE_KEY=
 
 ## Getting Started
 
-**Live Demo:** [Noreva — Modern Digital Banking](https://norevabank.netlify.app/)
+**Live Demo:** [Noreva — Modern Digital Banking](https://norevabank.vercel.app/)
 
 ### Prerequisites
 
