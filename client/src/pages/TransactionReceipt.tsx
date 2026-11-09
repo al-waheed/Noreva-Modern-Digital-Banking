@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import jsPDF from "jspdf";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import PageHeader from "../components/PageHeader";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import api from "../lib/api";

@@ -3,6 +3,7 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { CheckCircle2, LockKeyhole } from "lucide-react";
 import PasswordInput from "../components/PasswordInput";
 import api from "../lib/api";
+import { getErrorMessage } from "../lib/getErrorMessage";
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -48,10 +49,12 @@ const ResetPassword = () => {
       setConfirmPassword("");
 
       navigate("/login", { replace: true });
-    } catch (error: any) {
+    } catch (error) {
       setError(
-        error.response?.data?.message ||
+        getErrorMessage(
+          error,
           "Unable to reset your password. Please request a new reset link.",
+        ),
       );
     } finally {
       setIsSubmitting(false);

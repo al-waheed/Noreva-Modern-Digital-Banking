@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   useCallback,
@@ -15,45 +13,8 @@ import { clearDashboardData } from "../store/slices/dashboardSlice";
 import { clearTransactions } from "../store/slices/transactionsSlice";
 
 import { clearNotifications } from "../store/slices/notificationSlice";
-
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string | null;
-  accountNumber?: string;
-  balance?: number;
-  hasTransactionPin?: boolean;
-  cards?: {
-    id: string;
-    cardNumber: string;
-    expiryMonth: number;
-    expiryYear: number;
-    cvv: string;
-    type: string;
-    status: string;
-  }[];
-}
-
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (
-    firstName: string,
-    lastName: string,
-    email: string,
-    phone: string,
-    password: string,
-  ) => Promise<void>;
-  createTransactionPin: (pin: string) => Promise<void>;
-  changeTransactionPin: (currentPin: string, newPin: string) => Promise<void>;
-  refreshUser: () => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from "./AuthContextValue";
+import type { User } from "./AuthContextValue";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -191,14 +152,4 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-
-  return context;
 };

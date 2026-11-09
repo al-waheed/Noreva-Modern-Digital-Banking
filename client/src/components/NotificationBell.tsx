@@ -7,7 +7,7 @@ import {
   markNotificationRead,
 } from "../store/slices/notificationSlice";
 import { fetchDashboardData } from "../store/slices/dashboardSlice";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 const NotificationBell = () => {
   const { user } = useAuth();

@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import Panel from "../components/Panel";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import CreateTransactionPinModal from "../components/CreateTransactionPinModal";
 import ChangeTransactionPinModal from "../components/ChangeTransactionPinModal";
+import { getErrorMessage } from "../lib/getErrorMessage";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -31,10 +32,8 @@ const Settings = () => {
       await refreshUser();
       setIsCreatePinOpen(false);
       setNotice("Transaction PIN created.");
-    } catch (error: any) {
-      setPinError(
-        error.response?.data?.message || "Unable to create transaction PIN.",
-      );
+    } catch (error) {
+      setPinError(getErrorMessage(error, "Unable to create transaction PIN."));
     } finally {
       setIsUpdatingPin(false);
     }
@@ -49,10 +48,8 @@ const Settings = () => {
       await refreshUser();
       setIsChangePinOpen(false);
       setNotice("Transaction PIN changed.");
-    } catch (error: any) {
-      setPinError(
-        error.response?.data?.message || "Unable to change transaction PIN.",
-      );
+    } catch (error) {
+      setPinError(getErrorMessage(error, "Unable to change transaction PIN."));
     } finally {
       setIsUpdatingPin(false);
     }

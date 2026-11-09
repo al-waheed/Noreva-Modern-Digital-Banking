@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 export interface TransactionPerson {
   id?: string;
@@ -37,11 +38,12 @@ export const useTransactionFilters = ({
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [requestedPage, setCurrentPage] = useState(1);
 
-  const isReceived = (transaction: Transaction) => {
-    return transaction.receiverId === userId;
-  };
+  const isReceived = useCallback(
+    (transaction: Transaction) => transaction.receiverId === userId,
+    [userId],
+  );
 
   const filteredTransactions = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -78,12 +80,14 @@ export const useTransactionFilters = ({
 
       return matchesSearch && matchesFromDate && matchesToDate;
     });
-  }, [transactions, search, fromDate, toDate, userId]);
+  }, [transactions, search, fromDate, toDate, isReceived]);
 
   const totalPages = Math.max(
     1,
     Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE),
   );
+
+  const currentPage = Math.min(requestedPage, totalPages);
 
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -91,20 +95,23 @@ export const useTransactionFilters = ({
     return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredTransactions, currentPage]);
 
-  useEffect(() => {
+  const updateSearch: Dispatch<SetStateAction<string>> = (value) => {
     setCurrentPage(1);
-  }, [search, fromDate, toDate]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+    setSearch(value);
+  };
+  const updateFromDate: Dispatch<SetStateAction<string>> = (value) => {
+    setCurrentPage(1);
+    setFromDate(value);
+  };
+  const updateToDate: Dispatch<SetStateAction<string>> = (value) => {
+    setCurrentPage(1);
+    setToDate(value);
+  };
 
   const clearFilters = () => {
-    setSearch("");
-    setFromDate("");
-    setToDate("");
+    updateSearch("");
+    updateFromDate("");
+    updateToDate("");
     setCurrentPage(1);
   };
 
@@ -118,7 +125,7 @@ export const useTransactionFilters = ({
 
       return total;
     }, 0);
-  }, [filteredTransactions, userId]);
+  }, [filteredTransactions, isReceived]);
 
   const totalSent = useMemo(() => {
     return filteredTransactions.reduce((total, transaction) => {
@@ -128,15 +135,15 @@ export const useTransactionFilters = ({
 
       return total;
     }, 0);
-  }, [filteredTransactions, userId]);
+  }, [filteredTransactions, isReceived]);
 
   return {
     search,
-    setSearch,
+    setSearch: updateSearch,
     fromDate,
-    setFromDate,
+    setFromDate: updateFromDate,
     toDate,
-    setToDate,
+    setToDate: updateToDate,
     currentPage,
     setCurrentPage,
     filteredTransactions,

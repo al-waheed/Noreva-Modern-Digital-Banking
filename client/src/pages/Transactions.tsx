@@ -7,7 +7,7 @@ import Pagination from "../components/Pagination";
 import { TransactionSummary } from "../components/transactions/TransactionSummary";
 import { TransactionTable } from "../components/transactions/TransactionTable";
 import PageHeader from "../components/PageHeader";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import type { AppDispatch, RootState } from "../store/store";
 import { fetchTransactions } from "../store/slices/transactionsSlice";
 import { useTransactionFilters } from "../hooks/useTransactionFilters";

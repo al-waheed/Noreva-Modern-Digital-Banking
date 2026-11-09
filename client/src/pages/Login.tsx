@@ -1,8 +1,9 @@
 import { useState, type SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import PasswordInput from "../components/PasswordInput";
 import BrandLink from "../components/BrandLink";
+import { getErrorMessage } from "../lib/getErrorMessage";
 
 const Login = () => {
   const { login } = useAuth();
@@ -22,10 +23,8 @@ const Login = () => {
     try {
       await login(email, password);
       navigate("/dashboard");
-    } catch (error: any) {
-      setError(
-        error.response?.data?.message || "Unable to sign in. Please try again.",
-      );
+    } catch (error) {
+      setError(getErrorMessage(error, "Unable to sign in. Please try again."));
     } finally {
       setIsSubmitting(false);
     }

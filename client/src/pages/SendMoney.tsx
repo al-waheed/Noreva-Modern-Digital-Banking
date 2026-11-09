@@ -2,9 +2,10 @@ import { ArrowLeft, CheckCircle2, Loader2, Send, User } from "lucide-react";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { sendTransferEmail } from "../lib/email";
 import api from "../lib/api";
+import { getErrorMessage } from "../lib/getErrorMessage";
 import TransactionPinModal from "../components/TransactionPinModal";
 import CreateTransactionPinModal from "../components/CreateTransactionPinModal";
 
@@ -55,8 +56,8 @@ const SendMoney = () => {
       );
 
       setRecipient(response.data.recipient);
-    } catch (error: any) {
-      setError(error.response?.data?.message || "Unable to find this account.");
+    } catch (error) {
+      setError(getErrorMessage(error, "Unable to find this account."));
     } finally {
       setIsSearching(false);
     }
@@ -153,9 +154,9 @@ const SendMoney = () => {
           },
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       setPinError(
-        error.response?.data?.message || "Transfer failed. Please try again.",
+        getErrorMessage(error, "Transfer failed. Please try again."),
       );
     } finally {
       setIsSending(false);
@@ -173,11 +174,14 @@ const SendMoney = () => {
       setShowCreatePinModal(false);
 
       await confirmTransfer(pin);
-    } catch (error: any) {
+    } catch (error) {
       setCreatePinError(
-        error.response?.data?.message ||
-          error.message ||
-          "Unable to create transaction PIN.",
+        getErrorMessage(
+          error,
+          error instanceof Error
+            ? error.message
+            : "Unable to create transaction PIN.",
+        ),
       );
 
       setIsSending(false);

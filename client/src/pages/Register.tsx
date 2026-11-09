@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import PasswordInput from "../components/PasswordInput";
 import BrandLink from "../components/BrandLink";
+import { getErrorMessage } from "../lib/getErrorMessage";
 
 const Register = () => {
   const { register } = useAuth();
@@ -42,10 +43,12 @@ const Register = () => {
       );
 
       navigate("/dashboard");
-    } catch (error: any) {
+    } catch (error) {
       setError(
-        error.response?.data?.message ||
+        getErrorMessage(
+          error,
           "Unable to create your account. Please try again.",
+        ),
       );
     } finally {
       setIsSubmitting(false);

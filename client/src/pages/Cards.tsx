@@ -1,6 +1,6 @@
 import { Copy, Eye, EyeOff, Lock, ShieldCheck, Unlock } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import api from "../lib/api";

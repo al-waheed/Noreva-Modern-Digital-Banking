@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import { getErrorMessage } from "../lib/getErrorMessage";
 import PageHeader from "../components/PageHeader";
 
 const ForgotPassword = () => {
@@ -31,12 +32,14 @@ const ForgotPassword = () => {
       );
 
       setEmail("");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Forgot password error:", error);
 
       setError(
-        error.response?.data?.message ||
+        getErrorMessage(
+          error,
           "Unable to process your request. Please try again.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
